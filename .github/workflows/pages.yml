@@ -1,0 +1,74 @@
+name: Deploy WIP POC to GitHub Pages
+
+# This workflow has to live at the repository root: GitHub Actions only discovers
+# workflows in <repo root>/.github/workflows. The app itself lives in a vault
+# subdirectory, so every step that touches the app is pointed at it explicitly.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'POC-EuroWIP-Vault/POC/wip-poc/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Leave the concurrency group alone when only a non-app path changed.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: POC-EuroWIP-Vault/POC/wip-poc
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: POC-EuroWIP-Vault/POC/wip-poc/package-lock.json
+
+      - run: npm ci
+
+      # The schema, seed, business rules and domain layer are checked before
+      # anything is published, so a regression in the constraints cannot ship.
+      - run: npm run verify
+      - run: npm run smoke
+      - run: npm run check
+      - run: npm run build
+
+      # Compiling is not the same as mounting. Drive the built bundle in a real
+      # browser and assert it renders.
+      - name: Browser smoke test
+        run: |
+          npx vite preview --port 4173 &
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:4173 >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://localhost:4173 >/dev/null
+          node scripts/browser-check.mjs http://localhost:4173
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: POC-EuroWIP-Vault/POC/wip-poc/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
