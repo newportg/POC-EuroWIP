@@ -99,3 +99,14 @@ scripts/browser-check.mjs  end-to-end render check in headless Chrome
 The seed is deliberately written as live transitions rather than finished rows:
 inserting a line straight into `Billed` would skip the invoice checks and the
 gaming alert, which are the parts worth demonstrating.
+
+## Deployment
+
+This app is a subdirectory of a larger repository, so its Pages workflow lives at
+the **repository root** in `.github/workflows/pages.yml` — GitHub only discovers
+workflows there. Every step that touches the app is directed at this folder with
+`defaults.run.working-directory`, and the build gates on `verify`, `smoke`,
+`check` and `browser-check` before publishing `dist/`.
+
+Pages must be enabled with **Settings → Pages → Build and deployment → Source:
+GitHub Actions**. Nothing deploys until that is set.
