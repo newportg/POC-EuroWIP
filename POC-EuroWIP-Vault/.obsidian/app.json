@@ -1,1 +1,7 @@
-{}
+{
+  "userIgnoreFilters": [
+    "POC/wip-poc/node_modules/",
+    "POC/wip-poc/dist/",
+    "POC/wip-poc/scripts/wasm-url-shim.mjs"
+  ]
+}

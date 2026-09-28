@@ -8,7 +8,7 @@
   const fmt = (n) =>
     n == null ? '—' : new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(n);
 
-  let alerts = $derived(version >= 0 ? getAlerts().filter((a) => !a.dismissed) : []);
+  let alerts = $derived(version >= 0 ? getAlerts().filter((a) => !a.resolved) : []);
   let buckets = $derived(getReceivableBuckets());
   let receivables = $derived(getReceivables());
   let periods = $derived(getPeriods());

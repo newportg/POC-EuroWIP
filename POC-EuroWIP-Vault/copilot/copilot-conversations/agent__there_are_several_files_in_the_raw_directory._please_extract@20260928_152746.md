@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_f17985c76ffeK80ufObLfZZ6P2"
 agentLabel: "Extract WIP requirements into wiki"
-usage: '{"usedTokens":96141,"contextWindow":200000,"updatedAt":1790607751642}'
+usage: '{"usedTokens":92075,"contextWindow":200000,"updatedAt":1790610752876}'
 tags:
   - copilot-conversation
 ---
@@ -338,3 +338,55 @@ Let me verify tooling and network first.Network is good. Let me re-read the doma
 - `C:\Users\NEWPORTG\AppData\Local\Temp\opencode\puml`: Extracted PlantUML sources.
 Let me read the schema to fix these precisely rather than guess:Found it: `SELECT NEW.previous_probability = OLD.probability;` is a **comparison**, not an assignment — SQLite forbids assigning to `NEW`. Let me check the remaining two triggers:The fee-schedule and terminal-status failures are bugs in my *tests*, not the schema (WIP id 4 belongs to instruction 2, which *is* Capital Markets; and id 1 is still `WIP`, not terminal). But the PL-3 trigger is a genuine bug. Let me check the instruction CHECK:Three real fixes needed. Let me apply them:Now fixing the three test bugs (they asserted against the wrong rows):Backticks inside a JS template literal — my own comment broke the string. Fixing:Two left. The pre-image one is another wrong expectation in my test (WIP 4 starts at 60%, and 60 was recorded correctly). The CHECK one needs a real look at the table definition:The CHECK looks correct. Let me probe the actual row state rather than keep reasoning:Found it: my seed edit emitted the **string** `'NULL'` instead of the SQL `NULL` keyword, so `termination_reason` was the 4-character text `"NULL"` — which satisfies `IS NOT NULL`. A quoting bug that silently disabled a business rule:All 30 pass. Now the domain layer and UI. First `repo.js` — the seam that keeps the UI portable to a hosted database later:Now the UI shell:Now the components:Now the app shell that ties it together:Two fixes: top-level `await` isn't allowed in a component, and the read-only fact grid misuses `<label>`:Clean. Now the build:Build and rules are green. The remaining untested surface is `repo.js` SQL and whether the app actually mounts. Let me smoke-test it in a real browser:
 [Timestamp: 2026/09/28 16:09:34]
+
+**user**: is this still running
+[Timestamp: 2026/09/28 16:46:45]
+
+**ai**: Yes — the `vite preview` server is still up and serving on port 4173. Let me finish the smoke test against it, then shut it down:The app is stuck on the loading state — `openDatabase()` never settles. Let me capture the browser console:The headless run with a separate profile produced nothing — let me take a more reliable route and exercise `repo.js` directly in Node with small shims for the two browser APIs:My shim never fires `onupgradeneeded`, so the object store doesn't exist. Fixing the shim:The smoke test is earning its keep — 7 real bugs. Let me look at the alert table:Column is `resolved`, not `dismissed`. Let me fix all seven:Now the two schema gaps — receivables didn't expose the status, and an empty-string reason satisfied the withdrawal rule:Both suites green. But the earlier browser check hung on "Loading…" — I need to confirm the app actually mounts, since a green Node test doesn't prove the wasm/IndexedDB path works in a browser. Let me drive real Chrome over DevTools Protocol:The app boots with 16 rows. The "missing" KPIs and detail panel are a flaw in my probe, not the app: `innerText` returns CSS-uppercased text. Fixing the probe:End-to-end confirmed — and the browser KPIs match the Node run exactly (5,400,000 / 522,765 / 3), which cross-checks both paths. Let me wire this into the scripts and CI, and clean up:Now the Obsidian ignore config, so the vault doesn't index `node_modules` and build output:Now a final full verification pass from a clean state:All five gates pass. Let me add the browser check to the README and confirm the final layout:The POC is built and verified end to end. It's at `POC/wip-poc` in your vault.
+
+## What it does
+
+A working model of the `kf_Instruction` / `kf_WIP` design where the business rules live in the **database schema as constraints and triggers**, not in the UI. Bill a line with no invoice number and the write is rejected — whether it came from the app, a SQL console, or a future reporting tool.
+
+Three tabs: **WIP** (KPIs, filterable table, line detail with lifecycle actions), **Controls** (alerts, receivables ageing, period locking, event log), **Model & questions** (the relational diagram and the open questions from the wiki).
+
+## The architecture caveat — this is the one thing I need you to confirm
+
+GitHub Pages can only serve static files, so there is no server to host a database. I used **SQLite compiled to WebAssembly running in the browser**, mirrored into IndexedDB. It is a real relational engine — foreign keys, check constraints, triggers, views, generated columns — and it survives a reload, but it is **per-browser**: two visitors don't share data, and it isn't a multi-user backend.
+
+That was my call, not yours. If you want a genuinely shared database, the swap is to hosted Postgres (Neon/Supabase) and reimplementing the bottom of `src/lib/db.js` — every screen goes through `src/lib/repo.js` and none of them know which engine is underneath. Say the word and I'll do that version instead.
+
+## Verification
+
+Five gates, all green:
+
+| Gate | Result |
+| --- | --- |
+| `npm run verify` — schema, seed, 14 business rules | 30/30 |
+| `npm run smoke` — every query and command in `repo.js` | 30/30 |
+| `npm run check` — svelte-check | 0 errors, 0 warnings |
+| `npm run build` | 730ms |
+| `npm run browser-check` — real headless Chrome | mounts, 16 rows, all 3 tabs |
+
+The browser check cross-validates the Node path: both report pipeline 5,400,000, weighted 522,765, 3 stale lines.
+
+## Bugs the tests caught (worth knowing about)
+
+- `SELECT NEW.previous_probability = OLD.probability` — that's a *comparison*, not an assignment. SQLite forbids writing to `NEW`, so the PL-3 pre-image silently never captured anything. Rewritten as an AFTER trigger that writes back to the row.
+- My seed was writing the **string** `'NULL'` instead of the SQL `NULL` keyword, so `termination_reason` was the four-character text `"NULL"` — which satisfies `IS NOT NULL`. That silently disabled the withdrawal rule.
+- `getWip` filtered on `w.wip_status` against the `v_wip` **view**, which has no `w` alias. Every filtered query was a SQL error. The unfiltered one worked, which is exactly the kind of thing a smoke test exists to catch.
+- The alert column is `resolved`; the UI was calling it `dismissed`.
+- The withdrawal CHECK accepted an empty string, so you could withdraw an instruction with no usable reason. Tightened to require a non-blank value.
+
+## Worth trying
+
+Open a line and press **Bill it** with the fields empty — the invoice-requirement trigger rejects it and explains why. Then bill a sub-30% line: it succeeds and the FL-5 gaming alert appears. Then lock a reporting month on the Controls tab and try to edit one of its lines.
+
+One behaviour I deliberately kept rather than "fixed": withdrawing an Instruction that owns a line in a closed period is **refused** by FL-4, because the cascade would otherwise rewrite history. There's a test asserting it.
+
+## What I haven't done
+
+- **No Git repository.** Your `README.md` says the vault is one; it isn't. You'll need to put `POC/wip-poc` in a repo and enable Pages for the workflow to deploy.
+- I added ignore filters to `.obsidian/app.json` for `node_modules` and `dist` — restart Obsidian for those to take.
+- The FL-4 automatic lock (15th of the following month) is a manual button here. I didn't add a scheduler, since a browser tab can't reliably fire on a date.
+[Timestamp: 2026/09/28 16:46:45]

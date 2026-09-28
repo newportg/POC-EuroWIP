@@ -9,7 +9,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --threshold warning",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "browser-check": "node scripts/browser-check.mjs",
+    "test": "npm run verify && npm run smoke"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.3",

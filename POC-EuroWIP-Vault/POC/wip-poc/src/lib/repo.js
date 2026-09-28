@@ -35,16 +35,18 @@ export function getWip(filters = {}) {
   const where = [];
   const params = [];
 
+  // These predicates run against the v_wip view, which already flattens the
+  // joins, so they reference bare column names rather than a table alias.
   if (filters.status) {
-    where.push('w.wip_status = ?');
+    where.push('wip_status = ?');
     params.push(filters.status);
   }
   if (filters.officeId) {
-    where.push('w.owning_office_id = ?');
+    where.push('owning_office_id = ?');
     params.push(filters.officeId);
   }
   if (filters.search) {
-    where.push('(w.name LIKE ? OR brand_name LIKE ? OR instruction_name LIKE ?)');
+    where.push('(name LIKE ? OR brand_name LIKE ? OR instruction_name LIKE ?)');
     const like = `%${filters.search}%`;
     params.push(like, like, like);
   }
@@ -176,7 +178,7 @@ export function getAlerts() {
 }
 
 export function dismissAlert(id) {
-  run('UPDATE alert SET dismissed = 1 WHERE id = ?', [id]);
+  run('UPDATE alert SET resolved = 1 WHERE id = ?', [id]);
 }
 
 // ----------------------------------------------------------- receivables

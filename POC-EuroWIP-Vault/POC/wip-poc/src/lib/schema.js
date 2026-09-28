@@ -114,8 +114,9 @@ CREATE TABLE instruction (
   negotiator               TEXT,
   comments                 TEXT,
   parent_id                INTEGER REFERENCES service_line_parent(id),
-  -- BR: termination reason required on withdrawal
-  CHECK (instruction_status <> 'Withdrawn' OR termination_reason IS NOT NULL)
+  -- BR: a non-blank termination reason is required on withdrawal. IS NOT NULL
+  -- alone would let an empty string through, which is not a usable reason.
+  CHECK (instruction_status <> 'Withdrawn' OR COALESCE(TRIM(termination_reason), '') <> '')
 );
 CREATE INDEX idx_instruction_status ON instruction(instruction_status);
 
@@ -270,6 +271,7 @@ SELECT
   w.id,
   w.name,
   w.brand_name,
+  w.wip_status,
   w.gross_fee,
   w.vat_percent,
   w.gross_fee * (1 + w.vat_percent / 100.0)  AS gross_incl_vat,

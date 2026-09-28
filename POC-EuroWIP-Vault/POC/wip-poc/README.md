@@ -15,11 +15,17 @@ or a future reporting tool. The rules hold regardless of which client writes.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run verify     # schema, seed and rule checks (30 assertions)
-npm run check      # svelte-check
-npm run build      # static output in dist/
+npm run dev            # http://localhost:5173
+npm run test           # schema, seed, rules and domain layer (60 assertions)
+npm run check          # svelte-check
+npm run build          # static output in dist/
+npm run browser-check  # loads the built app in headless Chrome and reads the page
 ```
+
+`browser-check` expects a served build. With `npm run build` done, run
+`npx vite preview --port 4173` in one terminal and `npm run browser-check` in
+another. It asserts that the app mounts, the seed renders, all three tabs load,
+and no uncaught exception is thrown.
 
 ## The database
 
@@ -85,7 +91,9 @@ src/lib/schema.js   tables, views, triggers  — the model
 src/lib/seed.js     demonstration data, transitioned so triggers fire
 src/lib/db.js       sql.js lifecycle + IndexedDB persistence
 src/lib/repo.js     domain queries and commands
-scripts/verify.mjs  headless rule checks
+scripts/verify.mjs     schema, seed and rule checks against raw sql.js
+scripts/smoke.mjs      every query and command in repo.js, with browser shims
+scripts/browser-check.mjs  end-to-end render check in headless Chrome
 ```
 
 The seed is deliberately written as live transitions rather than finished rows:
