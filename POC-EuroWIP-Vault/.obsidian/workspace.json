@@ -201,6 +201,8 @@
   },
   "active": "f45f33bb81cb2350",
   "lastOpenFiles": [
+    "POC/wip-poc/node_modules/svelte/src/internal/client/dom/blocks/svelte-head.js",
+    "POC/wip-poc/node_modules/svelte/src/internal/client/dom/blocks/svelte-element.js",
     "POC/wip-poc/node_modules/zimmerframe/types/index.d.ts.map",
     "POC/wip-poc/node_modules/zimmerframe/types/index.d.ts",
     "POC/wip-poc/node_modules/zimmerframe/types",
@@ -210,8 +212,6 @@
     "POC/wip-poc/node_modules/nanoid/url-alphabet/index.js",
     "POC/wip-poc/node_modules/nanoid/url-alphabet/index.cjs",
     "POC/wip-poc/node_modules/nanoid/url-alphabet",
-    "POC/wip-poc/node_modules/chokidar/esm/package.json",
-    "POC/wip-poc/node_modules/chokidar/esm/index.js",
     "wiki/wip-project-overview.md",
     "POC/wip-poc/README.md",
     "POC/wip-poc/node_modules/@esbuild/win32-x64/README.md",

@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_f17985c76ffeK80ufObLfZZ6P2"
 agentLabel: "Extract WIP requirements into wiki"
-usage: '{"usedTokens":92075,"contextWindow":200000,"updatedAt":1790610752876}'
+usage: '{"usedTokens":101348,"contextWindow":200000,"updatedAt":1790611476277}'
 tags:
   - copilot-conversation
 ---
@@ -390,3 +390,42 @@ One behaviour I deliberately kept rather than "fixed": withdrawing an Instructio
 - I added ignore filters to `.obsidian/app.json` for `node_modules` and `dist` — restart Obsidian for those to take.
 - The FL-4 automatic lock (15th of the following month) is a manual button here. I didn't add a scheduler, since a browser tab can't reliably fire on a date.
 [Timestamp: 2026/09/28 16:46:45]
+
+**user**: git repo has been defined
+[Timestamp: 2026/09/28 17:02:57]
+
+**ai**: Let me check where the repo actually lives and what it's pointed at:The repo is at `C:\Source\Obsidian\Projects\POC-EuroWIP` — one level *above* the vault, so the vault is a tracked subdirectory. Let me check its state:My path was wrong — the vault is `POC-EuroWIP-Vault/` inside the repo. Re-checking with the correct paths:App is fully committed (24 files), `node_modules`/`dist` correctly ignored via the nested `.gitignore`. Let me check push state and whether the workflow will actually trigger:Found a blocker. The workflow is in the wrong place — **GitHub Actions only reads `.github/workflows/` at the repository root**, so it will never run. And there's no root `package.json`, so it would fail even if found. Also the repo's branch is `master`, not `main`. Let me fix all three:I duplicated the wait line there — let me correct it:Now remove the dead nested workflow, which GitHub would never have run:Let me validate the workflow references real paths before committing:Two commits are staged locally but **not pushed** — I don't push without you asking.
+
+## What I found
+
+The repo root is `C:\Source\Obsidian\Projects\POC-EuroWIP` — the *parent* of your vault, so the vault itself is a tracked subdirectory (`POC-EuroWIP-Vault/`). The app was already committed (24 files), and `node_modules`/`dist` are correctly ignored by the nested `.gitignore` I wrote. No risk of committing build output.
+
+## The blocker I fixed
+
+Your Pages workflow was in the wrong place:
+
+```
+POC-EuroWIP-Vault/POC/wip-poc/.github/workflows/pages.yml   ← never runs
+```
+
+GitHub Actions only discovers workflows in `<repo root>/.github/workflows`. That file would have sat there indefinitely as a dead config. Two further faults behind it: there is no `package.json` at the repo root, so `npm ci` would have failed even if found, and the workflow triggered on `main` while your branch is `master`.
+
+I moved it to `.github/workflows/pages.yml` and directed every app step at the subdirectory:
+
+```yaml
+defaults:
+  run:
+    working-directory: POC-EuroWIP-Vault/POC/wip-poc
+```
+
+plus `cache-dependency-path` and the artifact `path` pointed at the app, `branches: [master]`, and `paths:` filters so vault-note edits don't trigger builds. Re-ran the full suite after the move — 30/30 verify, 30/30 smoke, 0 svelte-check errors, clean build.
+
+## Two things I can't do for you
+
+1. **Pages isn't enabled yet.** Go to Settings → Pages → Build and deployment → Source → **GitHub Actions**. Until that's set, the workflow will run and pass but have nowhere to publish to.
+2. **Push.** Say the word and I'll `git push origin master`.
+
+## One piece of noise worth tidying
+
+Your root `.gitignore` ignores `POC-Project-vault/.obsidian/workspace.json` — but the folder is actually named `POC-EuroWIP-Vault`, so that rule matches nothing and the real `workspace.json` is tracked. It shows as modified on every Obsidian window change. The fix is a one-line path correction; I left it alone since touching vault config uninvited is how you lose layout state.
+[Timestamp: 2026/09/28 17:02:57]
