@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_f13cf3546ffeu6fWEK25wM3DIA"
 agentLabel: "Continue POC work from yesterday"
-usage: '{"usedTokens":89366,"contextWindow":200000,"updatedAt":1790673386755}'
+usage: '{"usedTokens":95366,"contextWindow":200000,"updatedAt":1790675763159}'
 tags:
   - copilot-conversation
 ---
@@ -114,3 +114,86 @@ That last point is worth a decision. The `paths:` filter was written assuming de
 
 Also unchanged and still worth a look: `EuroWIP.code-workspace` shows as deleted plus re-added at the repo root, which the plugin caused and I didn't touch.
 [Timestamp: 2026/09/29 10:15:06]
+
+**user**: EuroWIP.code-workspace was renamed to match the project name POC-EuroWIP
+[Timestamp: 2026/09/29 10:53:20]
+
+**ai**: Let me verify the rename is actually recorded and not just present on disk.Rename is clean — recorded as a rename in `64c2919`, pushed, nothing outstanding. One thing about the file's contents though.Rename is correctly recorded — git detected it as a rename (not a delete-plus-add) in `64c2919`, and it's pushed. Nothing outstanding on that front. The name now matches the repo and remote.
+
+## One thing about where it points
+
+The workspace opens `"path": "."`, which is the **repo root**, not the vault:
+
+```
+C:\Source\Obsidian\Projects\POC-EuroWIP          ← workspace root
+└── POC-EuroWIP-Vault                          ← the actual vault, one level down
+    └── .obsidian
+```
+
+That's a defensible choice — the repo *is* `POC-EuroWIP`, so a same-named workspace file pointing at it is consistent. But it means the file's own name and its `path` disagree about scope, which is the kind of thing that confuses someone later. If you meant it to open the vault, `"path": "POC-EuroWIP-Vault"` is the one-line change.
+
+## The exclusion is the part I'd actually change
+
+The workspace excludes only `**/.obsidian`. But your Obsidian config excludes three things — and the two that matter most are exactly what VS Code will now crawl:
+
+| Path | Obsidian | VS Code workspace |
+| --- | --- | --- |
+| `POC/wip-poc/node_modules/` | excluded | **indexed** |
+| `POC/wip-poc/dist/` | excluded | **indexed** |
+| `**/.obsidian` | n/a | excluded |
+
+`node_modules` here is real — the earlier listing showed `sql-wasm` sources, `.bin` shims, and platform-specific binaries. VS Code's file watcher and search will walk all of it, which is the usual cause of a workspace feeling slow and search returning noise from vendored packages. `dist/` is small but contains a generated 658 kB wasm file and hashed bundles, so every commit shows them as noise if VS Code is doing file-level diffing.
+
+Two consistent options, and I'd take the second:
+
+1. Mirror the Obsidian filters in the workspace file — mechanical, but the paths are vault-relative so they'd need prefixing with `POC-EuroWIP-Vault/`, and they'd drift the moment either list changes.
+2. Replace the specific paths with `**/node_modules`, `**/dist`, and a couple of `**/build`-style globs. Position-independent, so the same file works whether it points at the repo root or the vault.
+
+Say which and I'll make the change. I'd also add `**/.git` while I'm there, since a repo-root workspace otherwise watches the entire object store.
+
+Nothing else is pending: CI run 5 is green, the live site passes the browser check, and the only uncommitted file is this conversation log, which the Obsidian plugin picks up on its next backup.
+[Timestamp: 2026/09/29 10:53:20]
+
+**user**: use the second
+[Timestamp: 2026/09/29 10:55:20]
+
+**ai**: Let me verify the file is still valid JSON and that the globs behave as intended.The file content is right, but my PowerShell check printed an empty exclude list while claiming valid JSON — contradictory. Let me re-verify the parse properly.My verifier was wrong, not the file. `settings` has a single key literally named `files.exclude` — that's how PowerShell 5.1's `ConvertFrom-Json` surfaces a nested key containing a dot. My `$j.settings.files.exclude` was three levels of dereference against a two-level object, so it returned `$null` and my property enumeration on `$null` yielded nothing.
+
+The correct accessor treats the dotted name as one key:Verified two independent ways — PowerShell and Node both parse it as valid JSON with all five excludes present. The earlier empty output was my bad accessor, not a broken file.
+
+`POC-EuroWIP.code-workspace` now reads:
+
+```json
+"files.exclude": {
+  "**/.git": true,
+  "**/.obsidian": true,
+  "**/node_modules": true,
+  "**/dist": true,
+  "**/build": true
+}
+```
+
+## What the position-independent globs buy you
+
+The scan confirmed the position-independence was the right call rather than just tidier. There are **two** `node_modules` trees, and the Obsidian filters cover only one:
+
+| Path | Obsidian filters | New workspace globs |
+| --- | --- | --- |
+| `POC-EuroWIP-Vault/POC/wip-poc/node_modules/` | excluded | excluded |
+| `POC-EuroWIP-Vault/.opencode/node_modules/` | **not excluded** | excluded |
+| `POC/wip-poc/dist/` | excluded | excluded |
+| `**/.git` | n/a | excluded |
+
+`POC-EuroWIP-Vault/.opencode/node_modules` is a full second install — 11 packages, each with its own `dist/`. Had I mirrored the Obsidian paths literally, that tree would still have been walked. The `**/` form catches both without enumerating either.
+
+The `**/dist` glob also collapses 27 individual `dist` directories (21 of them nested inside `node_modules`) into one rule.
+
+## Uncommitted, deliberately
+
+I've left the change uncommitted. It's a workspace file at the repo root, so it doesn't match the workflow's `paths:` filter (`POC-EuroWIP-Vault/POC/wip-poc/**`) and won't trigger a CI run or redeploy — the live site is untouched.
+
+Two things worth your attention:
+
+- **Your Obsidian filter for `.opencode/node_modules` is still missing.** The new file is more thorough than your Obsidian config. Obsidian is currently indexing that tree. Adding `POC-EuroWIP-Vault/.opencode/node_modules/` to `userIgnoreFilters` in `.obsidian/app.json` would bring it in line. Say the word and I'll do it.
+- **VS Code needs a reload** to pick up `files.exclude` — it's read at window open, not watched live.
+[Timestamp: 2026/09/29 10:55:20]
