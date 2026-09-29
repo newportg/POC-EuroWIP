@@ -271,29 +271,49 @@ try {
         await sleep(150);
         submit(wipForm);
         await sleep(600);
-        const wipRef = (text().match(/Created (WIP-\\d{6})/) || [])[1];
-        if (!wipRef) return { error: 'WIP line was not created', snippet: text().slice(0, 300) };
 
-        // The success path should route back to the WIP tab, filtered to it.
+        // On success the panel deliberately routes to the WIP tab, filtered to
+        // the new line, which unmounts this form. The "Created WIP-000000"
+        // confirmation is therefore already gone by the time we look for it, so
+        // assert on what the user is left looking at instead.
         const onWipTab = [...document.querySelectorAll('nav .tab')]
           .some(b => b.textContent.trim() === 'WIP' && b.classList.contains('active'));
-        const rowVisible = [...document.querySelectorAll('tbody tr')]
-          .some(tr => tr.textContent.includes(wipRef));
-        return { ref, wipRef, onWipTab, rowVisible, text: text().slice(0, 260) };
+        const bodyRows = [...document.querySelectorAll('tbody tr')];
+        // [0], not [1]: the pattern has no capture group, so the whole match is
+        // the reference.
+        const wipRef = bodyRows[0]?.textContent.match(/WIP-\\d{6}/)?.[0] ?? null;
+        const searchBox = document.querySelector('input.search')?.value ?? null;
+
+        if (!onWipTab) {
+          // Staying put means the submit was refused; surface the rule's reason.
+          return { error: 'WIP line was not created', snippet: text().slice(0, 300) };
+        }
+        if (!wipRef) {
+          return { error: 'routed to WIP but the new line is not listed',
+                   rows: bodyRows.length, search: searchBox,
+                   rowText: (bodyRows[0]?.textContent ?? '(none)').slice(0, 200),
+                   snippet: text().slice(0, 300) };
+        }
+        const rowVisible = bodyRows.some(tr => tr.textContent.includes(wipRef));
+        return { ref, wipRef, onWipTab, rowVisible, listed: bodyRows.length, text: text().slice(0, 260) };
       })()`
     });
 
     const flow = createFlow.result.value;
     if (flow.error) {
       console.log(`\ncreation flow: FAILED — ${flow.error}`);
+      if (flow.rows !== undefined) console.log(`  tbody rows present:  ${flow.rows}`);
+      if (flow.search !== undefined) console.log(`  search box holds:    ${JSON.stringify(flow.search)}`);
+      if (flow.rowText !== undefined) console.log(`  first row text:     ${JSON.stringify(flow.rowText)}`);
       if (flow.snippet) console.log('  page said: ' + flow.snippet.replace(/\n+/g, ' | '));
       exceptions.push(`creation flow: ${flow.error}`);
     } else {
       console.log(`\ncreation flow`);
       console.log(`  instruction created: ${flow.ref}`);
       console.log(`  WIP line created:    ${flow.wipRef}`);
-      console.log(`  returned to WIP tab: ${flow.onWipTab ? 'yes' : 'NO'}`);
+      console.log(`  routed to WIP tab:   ${flow.onWipTab ? 'yes' : 'NO'}`);
       console.log(`  new row visible:     ${flow.rowVisible ? 'yes' : 'NO'}`);
+      console.log(`  rows after filter:   ${flow.listed}`);
     }
   }
 

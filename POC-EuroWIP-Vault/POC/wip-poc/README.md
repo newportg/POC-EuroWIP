@@ -24,8 +24,9 @@ npm run browser-check  # loads the built app in headless Chrome and reads the pa
 
 `browser-check` expects a served build. With `npm run build` done, run
 `npx vite preview --port 4173` in one terminal and `npm run browser-check` in
-another. It asserts that the app mounts, the seed renders, all three tabs load,
-and no uncaught exception is thrown.
+another. It asserts that the app mounts, the seed renders, all four tabs load,
+that creating an Instruction and then a WIP line under it works through the real
+form, and that no uncaught exception is thrown.
 
 ## The database
 
@@ -61,6 +62,10 @@ talks to `src/lib/repo.js` and neither knows which engine is underneath.
 
 ## Things worth trying
 
+- On the **Create** tab, create an Instruction, then create a WIP line under it.
+  The parent dropdown fills in from what you just created, and the new line
+  appears in the WIP list filtered to itself. PL-2 fills service line, sector,
+  brand, negotiator, office and VAT from the parent, so you never enter them.
 - Open a line, press **Bill it** with the fields empty. The invoice-requirement
   trigger rejects the write and explains why.
 - Fill the fields and bill a line that is still under 30% probability. It
