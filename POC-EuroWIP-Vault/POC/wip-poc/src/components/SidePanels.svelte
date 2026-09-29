@@ -8,11 +8,16 @@
   const fmt = (n) =>
     n == null ? '—' : new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(n);
 
-  let alerts = $derived(version >= 0 ? getAlerts().filter((a) => !a.resolved) : []);
-  let buckets = $derived(getReceivableBuckets());
-  let receivables = $derived(getReceivables());
-  let periods = $derived(getPeriods());
-  let events = $derived(getEvents(25));
+  // Each derived must name `version` so it recomputes. A derived over a plain
+  // function call has no reactive dependency, and would otherwise freeze at its
+  // first value the moment a period is locked or an alert dismissed.
+  const read = (fn) => () => { void version; return fn(); };
+
+  let alerts = $derived.by(read(() => getAlerts().filter((a) => !a.resolved)));
+  let buckets = $derived.by(read(getReceivableBuckets));
+  let receivables = $derived.by(read(getReceivables));
+  let periods = $derived.by(read(getPeriods));
+  let events = $derived.by(read(() => getEvents(25)));
 
   const bucketTone = { '0-30': 'var(--good)', '31-60': 'var(--warn)', '61-90': '#f0883e', '90+': 'var(--bad)' };
   const maxTotal = $derived(Math.max(1, ...buckets.map((b) => b.total)));

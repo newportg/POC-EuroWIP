@@ -212,6 +212,89 @@ try {
       });
       console.log(`tab "${label}": ${tabRes.result.value}, content ${shown.result.value ? 'rendered' : 'MISSING'}`);
     }
+
+    // Drive the real creation flow: fill the instruction form, submit, then use
+    // the resulting parent to create a WIP line. This is the path a user takes,
+    // so it catches wiring that the Node suite cannot see.
+    const createFlow = await send('Runtime.evaluate', {
+      awaitPromise: true,
+      returnByValue: true,
+      expression: `(async () => {
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        const app = document.getElementById('app');
+        const text = () => app.innerText;
+        const tab = (name) => [...document.querySelectorAll('nav .tab')]
+          .find(b => b.textContent.trim().toLowerCase() === name).click();
+
+        const setNative = (el, value) => {
+          const proto = el instanceof HTMLSelectElement
+            ? HTMLSelectElement.prototype : el instanceof HTMLTextAreaElement
+              ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+          Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        const submit = (form) => form.requestSubmit();
+
+        // --- step 1: instruction
+        tab('create');
+        await sleep(300);
+        const forms = [...document.querySelectorAll('form')];
+        if (forms.length < 2) return { error: 'expected two creation forms, found ' + forms.length };
+        const instructionForm = forms[0];
+        setNative(instructionForm.querySelector('#i-sl'), 'Valuations');
+        setNative(instructionForm.querySelector('#i-brand'),
+          instructionForm.querySelector('#i-brand').options[1].value);
+        setNative(instructionForm.querySelector('#i-le'),
+          instructionForm.querySelector('#i-le').options[1].value);
+        setNative(instructionForm.querySelector('#i-office'),
+          instructionForm.querySelector('#i-office').options[1].value);
+        setNative(instructionForm.querySelector('#i-rev'), '275000');
+        setNative(instructionForm.querySelector('#i-neg'), 'Camille Roux');
+        await sleep(150);
+        submit(instructionForm);
+        await sleep(500);
+        const created = /Created INS-\\d{6}/.test(text());
+        if (!created) return { error: 'instruction was not created', snippet: text().slice(0, 300) };
+        const ref = (text().match(/Created (INS-\\d{6})/) || [])[1];
+
+        // --- step 2: WIP line under it
+        const wipForm = [...document.querySelectorAll('form')][1];
+        const parentSelect = wipForm.querySelector('#w-instr');
+        const newOption = [...parentSelect.options].find(o => o.textContent.includes(ref));
+        if (!newOption) return { error: 'new instruction not offered as a WIP parent', ref };
+        setNative(parentSelect, newOption.value);
+        setNative(wipForm.querySelector('#w-net'), '75000');
+        setNative(wipForm.querySelector('#w-retained'), '15000');
+        setNative(wipForm.querySelector('#w-prob'), '40');
+        setNative(wipForm.querySelector('#w-gross'), '75000');
+        await sleep(150);
+        submit(wipForm);
+        await sleep(600);
+        const wipRef = (text().match(/Created (WIP-\\d{6})/) || [])[1];
+        if (!wipRef) return { error: 'WIP line was not created', snippet: text().slice(0, 300) };
+
+        // The success path should route back to the WIP tab, filtered to it.
+        const onWipTab = [...document.querySelectorAll('nav .tab')]
+          .some(b => b.textContent.trim() === 'WIP' && b.classList.contains('active'));
+        const rowVisible = [...document.querySelectorAll('tbody tr')]
+          .some(tr => tr.textContent.includes(wipRef));
+        return { ref, wipRef, onWipTab, rowVisible, text: text().slice(0, 260) };
+      })()`
+    });
+
+    const flow = createFlow.result.value;
+    if (flow.error) {
+      console.log(`\ncreation flow: FAILED — ${flow.error}`);
+      if (flow.snippet) console.log('  page said: ' + flow.snippet.replace(/\n+/g, ' | '));
+      exceptions.push(`creation flow: ${flow.error}`);
+    } else {
+      console.log(`\ncreation flow`);
+      console.log(`  instruction created: ${flow.ref}`);
+      console.log(`  WIP line created:    ${flow.wipRef}`);
+      console.log(`  returned to WIP tab: ${flow.onWipTab ? 'yes' : 'NO'}`);
+      console.log(`  new row visible:     ${flow.rowVisible ? 'yes' : 'NO'}`);
+    }
   }
 
   if (consoleErrors.length) {

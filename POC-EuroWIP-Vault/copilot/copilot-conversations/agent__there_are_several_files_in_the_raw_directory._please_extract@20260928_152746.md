@@ -1,5 +1,5 @@
 ---
-epoch: 1790605666721
+epoch: 1790605666000
 mode: agent
 backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
@@ -429,3 +429,22 @@ plus `cache-dependency-path` and the artifact `path` pointed at the app, `branch
 
 Your root `.gitignore` ignores `POC-Project-vault/.obsidian/workspace.json` — but the folder is actually named `POC-EuroWIP-Vault`, so that rule matches nothing and the real `workspace.json` is tracked. It shows as modified on every Obsidian window change. The fix is a one-line path correction; I left it alone since touching vault config uninvited is how you lose layout state.
 [Timestamp: 2026/09/28 17:02:57]
+
+**user**: The user should be able to create a instruction, and from the instruction create a wip entry
+[Timestamp: 2026/09/28 17:28:15]
+
+**ai**: Good gap to close — right now the app can only transition existing lines, not create anything. Let me check the exact column constraints first:Now the repo functions:Now the creation UI:Now wire it into the app:Now tests for the new paths:Both failures are real schema gaps, not test bugs:
+
+1. The Capital Markets fee-schedule guard is `BEFORE UPDATE` only — so you can **create** an invalid line, just not fix one. The rule has to hold on insert.
+2. My KPI baseline was stale — earlier tests in the run had already moved lines out of the pipeline, so the fixed number was meaningless.Same backtick mistake in a comment inside the SQL template literal. Fixing:Now let me extend the browser check to actually exercise the two creation flows, not just confirm the tab renders:
+[Timestamp: 2026/09/28 17:28:15]
+
+**user**: whats taking so long
+[Timestamp: 2026/09/28 17:49:31]
+
+**ai**: Fair question — I've been verbose. Short answer: I was writing a browser test that drives the real create form, and it found a genuine bug.
+
+**The bug:** in the Create panel, `instructions` is a `$derived` that calls `getInstructions()`. That function reads the module-level database, which isn't a reactive dependency, so Svelte computes the dropdown **once at mount and never refreshes it**. An instruction you just created never appears as a WIP parent. Anyone using this app would hit it immediately.
+
+Same latent bug in the Controls tab: locking a period bumps the version, but the periods and ageing deriveds don't reference it, so those tables go stale.
+[Timestamp: 2026/09/28 17:49:31]

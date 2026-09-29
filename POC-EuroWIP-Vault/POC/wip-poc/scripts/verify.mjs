@@ -74,7 +74,7 @@ check('tables created', () => {
 });
 check('triggers created', () => {
   const n = one("SELECT count(*) AS n FROM sqlite_master WHERE type='trigger'").n;
-  assert(n === 17, `expected 17 triggers, got ${n}`);
+  assert(n === 18, `expected 18 triggers, got ${n}`);
   return `${n} triggers`;
 });
 check('views created', () => {
@@ -228,6 +228,20 @@ check('fee schedule links freely within Capital Markets', () => {
   db.run('UPDATE wip SET fee_schedule_id = 2 WHERE id = 1');
   const row = one('SELECT fee_schedule_id FROM wip WHERE id = 1');
   assert(row.fee_schedule_id === 2, 'legal CM link was rejected');
+});
+check('fee schedule is refused on insert, not just on update', () => {
+  // The UPDATE guard alone would let a non-CM line be born invalid and only
+  // then become unrepairable.
+  const instr = one(`
+    SELECT i.id FROM instruction i
+     WHERE i.service_line <> 'Capital Markets' LIMIT 1
+  `).id;
+  return expectBlocked(
+    'blocked',
+    'Capital Markets',
+    `INSERT INTO wip (id, name, instruction_id, fee_schedule_id, reporting_month)
+     VALUES (999901, 'WIP-999901', ${instr}, 1, '2026-01-01')`
+  );
 });
 check('withdrawal requires a termination reason', () => {
   // Instruction 5 has no WIP in a locked period, so the CHECK is what fires.

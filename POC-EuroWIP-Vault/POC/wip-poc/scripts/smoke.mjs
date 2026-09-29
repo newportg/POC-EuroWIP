@@ -257,6 +257,102 @@ await check('dismissAlert', async () => {
   repo.dismissAlert(alert.id);
   assert(repo.getAlerts().find((a) => a.id === alert.id).resolved === 1, 'not resolved');
 });
+console.log('\ncreation');
+const cm = repo.getInstructions().find((i) => i.service_line === 'Capital Markets' && i.instruction_status === 'Active');
+const nonCm = repo.getInstructions().find((i) => i.service_line !== 'Capital Markets' && i.instruction_status === 'Active');
+const brand = repo.getBrands()[0];
+const entity = repo.getLegalEntities()[0];
+const office = repo.getOffices()[0];
+
+await check('createInstruction rejects a missing service line', async () => {
+  const r = repo.createInstruction({ client_account_id: brand.id, legal_entity_account_id: entity.id, owning_office_id: office.id, start_date: '2026-09-01' });
+  assert(!r.ok && r.error.includes('service line'), `wrong reason: ${r.error}`);
+});
+await check('createInstruction rejects an unregistered service line', async () => {
+  const r = repo.createInstruction({ service_line: 'Space Mining', client_account_id: brand.id, legal_entity_account_id: entity.id, owning_office_id: office.id, start_date: '2026-09-01' });
+  assert(!r.ok && r.error.includes('No service-line parent'), `wrong reason: ${r.error}`);
+});
+await check('createInstruction enforces F5 on the invoice entity', async () => {
+  const r = repo.createInstruction({ service_line: 'Valuations', client_account_id: brand.id, legal_entity_account_id: brand.id, owning_office_id: office.id, start_date: '2026-09-01' });
+  assert(!r.ok, 'a Brand/Group as invoice entity should be rejected');
+  assert(r.error.includes('F5'), `wrong reason: ${r.error}`);
+  return 'brand rejected as invoice party';
+});
+await check('createInstruction creates a sequential reference', async () => {
+  const r = repo.createInstruction({
+    service_line: 'Valuations', instruction_type: 'Engagement',
+    client_account_id: brand.id, legal_entity_account_id: entity.id,
+    owning_office_id: office.id, start_date: '2026-09-01',
+    expected_revenue: 320000, sector: 'Office', negotiator: 'Camille Roux'
+  });
+  assert(r.ok, r.error);
+  assert(/^INS-\d{6}$/.test(r.name), `bad reference format: ${r.name}`);
+  const row = repo.getInstructions().find((i) => i.id === r.id);
+  assert(row, 'instruction not readable after insert');
+  assert(row.parent_service_line === 'Valuations', 'PL-1 parent not resolved');
+  return `${r.name} under ${row.parent_service_line}`;
+});
+await check('createWip requires a parent (PL-1)', async () => {
+  const r = repo.createWip({ instruction_id: null, reporting_month: '2026-09-01' });
+  assert(!r.ok && r.error.includes('PL-1'), `wrong reason: ${r.error}`);
+});
+await check('createWip validates probability', async () => {
+  const r = repo.createWip({ instruction_id: cm.id, reporting_month: '2026-09-01', probability: 140 });
+  assert(!r.ok && r.error.includes('between 0 and 100'), `wrong reason: ${r.error}`);
+});
+await check('createWip refuses a withdrawn instruction', async () => {
+  const r = repo.createWip({ instruction_id: repo.getInstructions().find((i) => i.instruction_status === 'Withdrawn').id, reporting_month: '2026-09-01' });
+  assert(!r.ok && r.error.includes('FL-2'), `wrong reason: ${r.error}`);
+});
+await check('createWip lets PL-2 fill the classification', async () => {
+  const r = repo.createWip({
+    instruction_id: nonCm.id, net_fee_to_group: 90000, office_retained: 22500,
+    probability: 30, gross_fee: 90000, reporting_month: '2026-09-01'
+  });
+  assert(r.ok, r.error);
+  const line = repo.getWipLine(r.id);
+  assert(line.service_line === nonCm.service_line, `service line not copied: ${line.service_line}`);
+  assert(line.office_name === nonCm.office_name, 'office not copied');
+  assert(line.brand_name === nonCm.client_name, 'brand not copied');
+  assert(line.vat_percent === 20, `VAT not defaulted: ${line.vat_percent}`);
+  assert(line.parent_type === 'Instruction', 'PL-1 parent type not stamped');
+  return `${r.name}: ${line.service_line} / ${line.office_city} / VAT ${line.vat_percent}%`;
+});
+await check('createWip computes the weighted value', async () => {
+  const line = repo.getWip().find((w) => w.office_retained === 22500 && w.probability === 30);
+  assert(line, 'the line just created was not found');
+  assert(Math.abs(line.weighted_office_retained - 6750) < 0.01, `weighted wrong: ${line.weighted_office_retained}`);
+  return `22500 x 30% = ${line.weighted_office_retained}`;
+});
+await check('createWip rejects a fee schedule off Capital Markets', async () => {
+  const fs = repo.getFeeSchedules()[0];
+  const r = repo.createWip({ instruction_id: nonCm.id, reporting_month: '2026-09-01', fee_schedule_id: fs.id });
+  assert(!r.ok, 'fee schedule on a non-CM line should be rejected');
+  assert(r.error.includes('Capital Markets'), `wrong reason: ${r.error}`);
+});
+await check('createWip accepts a fee schedule within Capital Markets', async () => {
+  const fs = repo.getFeeSchedules().find((f) => f.instruction_id === cm.id);
+  const r = repo.createWip({ instruction_id: cm.id, reporting_month: '2026-09-01', fee_schedule_id: fs.id, gross_fee: 50000 });
+  assert(r.ok, r.error);
+  return `${r.name} linked to ${fs.name}`;
+});
+await check('new records reach the reporting views', async () => {
+  // Measured as a delta, not against a fixed total: earlier tests in this run
+  // have already moved lines out of the pipeline, so an absolute baseline
+  // would be meaningless.
+  const before = repo.getKpis(null).gross_pipeline;
+  const r = repo.createWip({
+    instruction_id: nonCm.id, net_fee_to_group: 10000, office_retained: 2000,
+    probability: 20, gross_fee: 10000, reporting_month: '2026-09-01'
+  });
+  assert(r.ok, r.error);
+  const after = repo.getKpis(null).gross_pipeline;
+  assert(after - before === 10000, `expected pipeline +10000, got +${after - before}`);
+  assert(repo.getWip().some((w) => w.id === r.id), 'new line missing from getWip');
+  assert(repo.getPeriods().some((p) => p.reporting_month === '2026-09-01'), 'month missing from getPeriods');
+  return `pipeline ${before} -> ${after}`;
+});
+
 await check('data survives a reopen', async () => {
   const before = repo.getWip().length;
   await db.saveNow();

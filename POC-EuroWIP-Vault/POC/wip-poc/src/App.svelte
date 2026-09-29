@@ -7,6 +7,7 @@
   import WipDetail from './components/WipDetail.svelte';
   import SidePanels from './components/SidePanels.svelte';
   import ModelPanel from './components/ModelPanel.svelte';
+  import CreatePanel from './components/CreatePanel.svelte';
 
   let ready = $state(false);
   let fatal = $state('');
@@ -56,6 +57,12 @@
     selectedId = null;
     bump();
   }
+
+  /** Jump from a newly created record to it in the WIP list. */
+  function viewInWip(name) {
+    filters = { ...filters, search: name, status: '', staleOnly: false };
+    tab = 'wip';
+  }
 </script>
 
 {#if fatal}
@@ -87,6 +94,7 @@
 
   <nav>
     <button class="tab" class:active={tab === 'wip'} onclick={() => (tab = 'wip')}>WIP</button>
+    <button class="tab" class:active={tab === 'create'} onclick={() => (tab = 'create')}>Create</button>
     <button class="tab" class:active={tab === 'controls'} onclick={() => (tab = 'controls')}>Controls</button>
     <button class="tab" class:active={tab === 'model'} onclick={() => (tab = 'model')}>Model &amp; questions</button>
   </nav>
@@ -141,6 +149,8 @@
           {/if}
         </div>
       </div>
+    {:else if tab === 'create'}
+      <CreatePanel oncreated={bump} onview={viewInWip} {version} />
     {:else if tab === 'controls'}
       <SidePanels onchanged={bump} />
     {:else}

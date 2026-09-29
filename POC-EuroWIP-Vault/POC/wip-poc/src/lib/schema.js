@@ -491,6 +491,19 @@ BEGIN
 END;
 
 -- Guard the conditional-fee link: it is Capital Markets only.
+-- SQLite does not let a single trigger cover both INSERT and UPDATE OF a
+-- column, so the two events get their own triggers. Without the INSERT half,
+-- an invalid line could be created and only then become impossible to repair.
+CREATE TRIGGER trg_wip_fee_schedule_cm_insert
+BEFORE INSERT ON wip
+FOR EACH ROW
+WHEN NEW.fee_schedule_id IS NOT NULL
+ AND (SELECT i.service_line FROM instruction i WHERE i.id = NEW.instruction_id) <> 'Capital Markets'
+BEGIN
+  SELECT RAISE(ABORT,
+    'kf_FeeSchedule is a Capital Markets table; it cannot be linked to a non-CM WIP line.');
+END;
+
 CREATE TRIGGER trg_wip_fee_schedule_cm
 BEFORE UPDATE OF fee_schedule_id ON wip
 FOR EACH ROW

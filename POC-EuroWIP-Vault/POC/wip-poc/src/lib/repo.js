@@ -236,6 +236,171 @@ export function getPipelineByServiceLine(month) {
   );
 }
 
+// ------------------------------------------------------------ creation
+
+/**
+ * kf_Instruction and kf_WIP both use an explicit sequential key rather than an
+ * auto-increment, because the reference itself is a business identifier
+ * (INS-000009, WIP-000017) that finance quotes. The next number is derived
+ * inside the same transaction as the insert so two concurrent creations cannot
+ * collide.
+ */
+function nextRef(table, prefix) {
+  const row = queryOne(`SELECT COALESCE(MAX(id), 0) + 1 AS n FROM ${table}`);
+  const id = row.n;
+  return { id, name: `${prefix}-${String(id).padStart(6, '0')}` };
+}
+
+export function getBrands() {
+  return query("SELECT * FROM account WHERE classification = 'Brand/Group' ORDER BY name");
+}
+
+export function getLegalEntities() {
+  return query("SELECT * FROM account WHERE classification = 'Legal Entity' ORDER BY name");
+}
+
+export function getProperties() {
+  return query('SELECT * FROM property ORDER BY name');
+}
+
+export function getContacts() {
+  return query('SELECT * FROM contact ORDER BY name');
+}
+
+export function getFeeSchedules() {
+  return query(`
+    SELECT f.id, f.name, f.instruction_id, f.fee_type, f.fee_amount, i.name AS instruction_name
+      FROM fee_schedule f JOIN instruction i ON i.id = f.instruction_id
+     ORDER BY f.id
+  `);
+}
+
+/**
+ * Create an Instruction. Classification is not stored on the child WIP lines
+ * here; PL-2 copies it down when a line is created.
+ *
+ * @returns {{ok: true, id: number, name: string} | {ok: false, error: string}}
+ */
+export function createInstruction(input) {
+  const {
+    instruction_type = 'Mandate',
+    service_line,
+    client_account_id,
+    legal_entity_account_id,
+    primary_contact_id = null,
+    property_id = null,
+    owning_office_id,
+    instruction_status = 'Active',
+    start_date,
+    signed_date = null,
+    expected_revenue = 0,
+    termination_reason = null,
+    sector = null,
+    negotiator = null,
+    comments = null
+  } = input;
+
+  if (!service_line) return { ok: false, error: 'Choose a service line.' };
+  if (!client_account_id) return { ok: false, error: 'Choose the client brand.' };
+  if (!legal_entity_account_id) return { ok: false, error: 'Choose the legal entity (F5).' };
+  if (!owning_office_id) return { ok: false, error: 'Choose an owning office.' };
+  if (!start_date) return { ok: false, error: 'A start date is required.' };
+
+  // PL-1: an Instruction has exactly one service-line parent, and it has to be
+  // the one that matches the service line. Resolving it here means the form can
+  // never construct an impossible parentage.
+  const parent = queryOne('SELECT id FROM service_line_parent WHERE service_line = ?', [service_line]);
+  if (!parent) {
+    return { ok: false, error: `No service-line parent is registered for "${service_line}".` };
+  }
+
+  try {
+    return tx(() => {
+      const ref = nextRef('instruction', 'INS');
+      run(
+        `INSERT INTO instruction (
+           id, name, instruction_type, service_line,
+           client_account_id, legal_entity_account_id, primary_contact_id, property_id,
+           owning_office_id, instruction_status, start_date, signed_date,
+           expected_revenue, termination_reason, sector, negotiator, parent_id, comments
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          ref.id, ref.name, instruction_type, service_line,
+          client_account_id, legal_entity_account_id, primary_contact_id, property_id,
+          owning_office_id, instruction_status, start_date, signed_date,
+          Number(expected_revenue) || 0, termination_reason, sector, negotiator,
+          parent.id, comments
+        ]
+      );
+      return { ok: true, id: ref.id, name: ref.name };
+    });
+  } catch (err) {
+    return { ok: false, error: cleanError(err) };
+  }
+}
+
+/**
+ * Create a WIP line under an Instruction. Classification fields are left null
+ * on purpose: PL-2 fills service line, sector, brand, negotiator, office and
+ * VAT from the parent, which is the behaviour worth seeing.
+ */
+export function createWip(input) {
+  const {
+    instruction_id,
+    fee_schedule_id = null,
+    net_fee_to_group = 0,
+    office_retained = 0,
+    probability = 0,
+    gross_fee = 0,
+    reporting_month,
+    completion_month = null,
+    transaction_currency = 'EUR',
+    transaction_type = 'Fee',
+    comments = null
+  } = input;
+
+  if (!instruction_id) return { ok: false, error: 'Choose the parent Instruction (PL-1).' };
+  if (!reporting_month) return { ok: false, error: 'A reporting month is required.' };
+
+  const p = Number(probability);
+  if (Number.isNaN(p) || p < 0 || p > 100) {
+    return { ok: false, error: 'Probability must be between 0 and 100.' };
+  }
+
+  const parent = queryOne(
+    'SELECT id, instruction_status, service_line FROM instruction WHERE id = ?',
+    [instruction_id]
+  );
+  if (!parent) return { ok: false, error: 'That Instruction does not exist.' };
+  if (parent.instruction_status === 'Withdrawn') {
+    return { ok: false, error: 'Cannot add WIP to a withdrawn Instruction (FL-2).' };
+  }
+
+  try {
+    return tx(() => {
+      const ref = nextRef('wip', 'WIP');
+      run(
+        `INSERT INTO wip (
+           id, name, instruction_id, fee_schedule_id,
+           net_fee_to_group, office_retained, probability, gross_fee,
+           reporting_month, completion_month, transaction_currency,
+           transaction_type, comments
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          ref.id, ref.name, instruction_id, fee_schedule_id,
+          Number(net_fee_to_group) || 0, Number(office_retained) || 0, p,
+          Number(gross_fee) || 0,
+          reporting_month, completion_month, transaction_currency,
+          transaction_type, comments
+        ]
+      );
+      return { ok: true, id: ref.id, name: ref.name };
+    });
+  } catch (err) {
+    return { ok: false, error: cleanError(err) };
+  }
+}
+
 // --------------------------------------------------------------- actions
 
 export function downloadDatabase() {
