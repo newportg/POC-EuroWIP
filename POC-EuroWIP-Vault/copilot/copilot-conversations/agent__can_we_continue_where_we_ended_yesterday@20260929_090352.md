@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_f13cf3546ffeu6fWEK25wM3DIA"
 agentLabel: "Continue POC work from yesterday"
-usage: '{"usedTokens":69491,"contextWindow":200000,"updatedAt":1790672982742}'
+usage: '{"usedTokens":89366,"contextWindow":200000,"updatedAt":1790673386755}'
 tags:
   - copilot-conversation
 ---
@@ -80,3 +80,37 @@ Three things, none of which I can do alone:
 
 Also worth noting, since it cost us both time: the slow part was me narrating a stream of fragments and re-deriving state instead of batching calls. Two of the last four "problems" turned out not to exist. I'll batch from here.
 [Timestamp: 2026/09/29 10:03:34]
+
+**user**: github actions and pages site have been enabled
+[Timestamp: 2026/09/29 10:15:06]
+
+**ai**: Let me check whether the workflow actually ran green and whether the site is live.No `gh` on this machine. Let me query the GitHub API directly and check the live site.The site is live. Let me check whether my fix is in what CI is currently building.My fix is already on origin — the Git plugin pushed `64c2919` which contains `db0f998`, and run 5 is building exactly that. Let me wait for it.New asset hashes on the live site, so run 5's build is what got published. Let me prove the deployed site actually works by running the browser check against it.It's live and working. **https://newportg.github.io/POC-EuroWIP/**
+
+I ran the browser check against the deployed URL rather than just trusting the green tick, and it passes end to end on the real site — 16 seeded rows, all four tabs, and the full create flow: INS-000009 → WIP-000017, routed to the WIP tab and visible.
+
+## What the run history actually showed
+
+Enabling Pages surfaced two failures you'd probably not have looked at:
+
+| Run | Commit | Result |
+| --- | --- | --- |
+| 2 | `bf7209a` push | failure |
+| 3 | `bf7209a` manual dispatch | **success** |
+| 4 | `f3411c7` vault backup 09:11 | failure |
+| 5 | `64c2919` vault backup 10:14 | **success** |
+
+Run 4 is the interesting one. It failed, and it was failing the browser check on the broken create-flow assertion — the two defects I fixed in `db0f998`. So the failure was real and my fix is what turned run 5 green. Run 3 had passed only because it predated the creation flow entirely; it never exercised that path.
+
+Worth noting the CI caught this rather than you finding it. The gate did its job.
+
+## On the auto-commit behaviour
+
+Your Obsidian Git plugin commits and pushes on its own schedule, which means:
+
+- `db0f998` was swept into `64c2919` and pushed before I looked. Nothing is unpushed — `origin/master..HEAD` is empty.
+- **Every auto-backup commit touching `POC/wip-poc/**` triggers a full CI run.** Since the plugin commits the whole vault including the app folder, that's frequent. The `paths:` filter only helps if a commit touches *nothing* in the app folder; the plugin's blanket commits usually do touch it.
+
+That last point is worth a decision. The `paths:` filter was written assuming deliberate commits, but with auto-commit the trigger is effectively "every few minutes". If the site redeploys constantly, narrow the trigger or turn off auto-push. If you're happy to redeploy often, leave it. I haven't changed it — it's your call and it changes your workflow, not the app.
+
+Also unchanged and still worth a look: `EuroWIP.code-workspace` shows as deleted plus re-added at the repo root, which the plugin caused and I didn't touch.
+[Timestamp: 2026/09/29 10:15:06]
