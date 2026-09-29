@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "POC/wip-poc/README.md",
-                "mode": "source",
+                "file": "wiki/archimate/wip-application-composition.md",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "wip-application-composition"
             }
           }
         ]
@@ -199,8 +199,11 @@
       "copilot:Open Copilot Agent Chat": false
     }
   },
-  "active": "f45f33bb81cb2350",
+  "active": "f930108c062aead0",
   "lastOpenFiles": [
+    "wiki/wip-table-specification.md",
+    "wiki/wip-instruction-model.md",
+    "POC/wip-poc/README.md",
     "copilot/copilot-conversations/agent__can_we_continue_where_we_ended_yesterday@20260929_090352.md",
     "POC/wip-poc/dist/assets/index-DVUZ4RIc.js",
     "POC/wip-poc/preview.err",
@@ -213,7 +216,6 @@
     "POC/wip-poc/node_modules/svelte/src/internal/client/dom/blocks/svelte-element.js",
     "POC/wip-poc/node_modules/zimmerframe/types/index.d.ts.map",
     "wiki/wip-project-overview.md",
-    "POC/wip-poc/README.md",
     "POC/wip-poc/node_modules/@esbuild/win32-x64/README.md",
     "POC/wip-poc/node_modules/svelte/LICENSE.md",
     "POC/wip-poc/node_modules/svelte/README.md",
@@ -234,8 +236,6 @@
     "wiki/archimate/wip-monthly-cycle.md",
     "wiki/archimate/wip-system-landscape.md",
     "wiki/archimate/wip-lifecycle.md",
-    "wiki/wip-period-locking-and-aging.md",
-    "wiki/wip-reporting-and-kpis.md",
-    "wiki/wip-rollout-plan.md"
+    "wiki/wip-period-locking-and-aging.md"
   ]
 }

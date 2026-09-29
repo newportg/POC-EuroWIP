@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_f13cf3546ffeu6fWEK25wM3DIA"
 agentLabel: "Continue POC work from yesterday"
-usage: '{"usedTokens":95366,"contextWindow":200000,"updatedAt":1790675763159}'
+usage: '{"usedTokens":111693,"contextWindow":200000,"updatedAt":1790676247012}'
 tags:
   - copilot-conversation
 ---
@@ -197,3 +197,33 @@ Two things worth your attention:
 - **Your Obsidian filter for `.opencode/node_modules` is still missing.** The new file is more thorough than your Obsidian config. Obsidian is currently indexing that tree. Adding `POC-EuroWIP-Vault/.opencode/node_modules/` to `userIgnoreFilters` in `.obsidian/app.json` would bring it in line. Say the word and I'll do it.
 - **VS Code needs a reload** to pick up `files.exclude` — it's read at window open, not watched live.
 [Timestamp: 2026/09/29 10:55:20]
+
+**user**: can you add a table schema diagram
+[Timestamp: 2026/09/29 11:03:16]
+
+**ai**: Let me see what diagram infrastructure already exists before I add a second one.Now I understand the conventions. Let me look at the actual table definitions, since a column-level diagram needs them.I have what I need to scope this, but there's a genuine fork I don't want to guess at.
+
+**Two different schemas could be meant by "table schema":**
+
+| | A — the POC's executable schema | B — the Dataverse `kf_` design |
+| --- | --- | --- |
+| Source | `src/lib/schema.js`, running now | `[[wip-table-specification]]`, the target build |
+| Content | 12 tables, ~100 columns, types, FKs, 2 generated columns, CHECK constraints | `kf_WIP` / `kf_Instruction` field spec |
+| Verifiable | Yes — it's what the browser check just exercised | No, only described in prose |
+
+Existing `wip-application-composition` is ArchiMate Application Composition — **conceptual**, relationships and multiplicities, no columns. A table schema diagram is a different artifact, so this genuinely adds something rather than duplicating.
+
+**And two different homes:** a wiki note (matching your five existing diagrams, PlantUML, Kroki-verified) or the app's **Model & questions** tab, which currently has an 11-line ASCII sketch at `ModelPanel.svelte:33-46` with no columns or keys.
+
+**My recommendation:** a wiki note at `wiki/archimate/wip-table-schema.md` covering the **POC's real schema** — because it's verifiable against SQL that demonstrably runs, and the app tab can link to it.
+
+One design constraint worth settling first: a single column-level ERD of 12 tables would render several thousand pixels wide, which your earlier session already established is unreadable in a note. I'd split it into three diagrams — **core lifecycle** (`instruction`, `wip`, `fee_schedule`), **reference data** (`account`, `business_unit`, `contact`, `property`, `site`, `service_line_parent`, `deal_property`), and **governance** (`alert`, `event_log`) — with the CHECK constraints and triggers annotated onto the columns they guard, since the whole point of the POC is that the rules live in the schema.
+
+So, three things to confirm:
+
+1. **POC schema or Dataverse design?**
+2. **Wiki note, app tab, or both?**
+3. **Split into three diagrams, or one despite the width?**
+
+If you just say "go" I'll take all three recommendations: POC schema, wiki note, three split diagrams, Kroki-verified, wired into `wip-archimate-index` and the `Dashboard.md` index the way the other five are.
+[Timestamp: 2026/09/29 11:03:16]
