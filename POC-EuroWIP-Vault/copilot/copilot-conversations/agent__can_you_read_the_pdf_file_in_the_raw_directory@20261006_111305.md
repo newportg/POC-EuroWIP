@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_eef4d6416ffe81GfQYxLXEc6Wv"
 agentLabel: "Answering open questions from PDF"
-usage: '{"usedTokens":47899,"contextWindow":200000,"updatedAt":1791284369306}'
+usage: '{"usedTokens":70846,"contextWindow":200000,"updatedAt":1791294753454}'
 tags:
   - copilot-conversation
 ---
@@ -63,3 +63,29 @@ One new tension worth flagging: the deck puts MVP finance as *"Manual (Finance A
 
 I've logged all of this into [[wip-open-questions]] under each affected question (plus a summary note), keeping them open — this is evidence, not resolution. Committed as `evidence: log architecture review PDF findings against WIP open questions`.
 [Timestamp: 2026/10/06 11:13:05]
+
+**user**: can you create a page which describes the high level workflow
+[Timestamp: 2026/10/06 14:49:08]
+
+**ai**: 
+
+
+
+The workflow picture is complete: the workbook's status ladder + automation rules, and the deck's BPF→% complete drive and integration flows. I'll create the page in the wiki and wire it into the overview's entry points.Now wiring it into the overview's entry points:Created **[[wip-high-level-workflow]]** — the page is at `wiki/wip-high-level-workflow.md`, committed as `docs: add high-level WIP workflow page`.
+
+What it covers:
+
+- **A rendered mermaid diagram** of the full journey: mandate signed → WIP line created → monthly accrual → reconcile / period lock → billed → paid / lost, plus the two exception paths (stale → re-forecast/close out, parent-loss cascade) and the BPF → % complete drive.
+- **Stage-by-stage table** — each step with its trigger, what happens, and the controls (PL-1/PL-2, FL-4/PL-4, FL-5, invoice field requirements, VAT defaults).
+- **The two clocks** — the `kf_wipstatus` ladder (finance control) vs the 8-stage deal BPF (the deck's S1 5% → S8 100% automation drive), which is the new material from the PDF.
+- **The monthly drumbeat** — FL-1 / FL-6 / month-end / lock cadences, pointing to the [[wip-monthly-cycle]] diagram for dynamics.
+- **Phase 7 target state** — the six integration-flow behaviours from the deck in a table, with the CRM→Finance mapping, flagged that the nine still aren't enumerated (Q10).
+- **Blocking section** — Q1, Q2, Q6, Q9 mapped onto the specific workflow steps they break.
+
+Two things I logged along the way rather than glossing over:
+
+1. **A new stage-name discrepancy** — the workbook BPF (Origination → Pitch → Mandate → … → Exchange → Completion) vs the deck's stages (S2 *Pitch & Mandate*, S3 *Instruction*, S6 *Exclusivity*, S7 *Due Diligence*). Same functional shape, different names — flagged as a callout because stage gates will be registered against stage names.
+2. The deck's present-tense D365 flows vs its own *"Manual (Finance Admin)"* MVP finance row (already noted under Q10 in [[wip-open-questions]]).
+
+I also added the new page at the top of the entry points in [[wip-project-overview]], so it's reachable from the hub. The Dashboard's wiki index will pick it up automatically (it's typed `spec`).
+[Timestamp: 2026/10/06 14:49:08]
