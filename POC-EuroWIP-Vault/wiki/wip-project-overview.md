@@ -125,6 +125,7 @@ while the Master Table Index marks both as MVP. Recorded in
 
 ## Entry points
 
+- [[wip-simple-workflow]] — the plain-English version, no jargon
 - [[wip-high-level-workflow]] — the end-to-end workflow, from mandate to paid
 - [[wip-table-specification]] — every `kf_WIP` column, status lifecycle, conditional requirements
 - [[wip-instruction-model]] — the parent, and the 13 service-line lookups

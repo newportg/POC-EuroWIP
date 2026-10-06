@@ -15,6 +15,8 @@ operating rhythm reconciles, locks and chases it. Combines the workbook (tables 
 rules) with the architecture review deck (the BPF → % complete drive and the
 integration flows).
 
+> Looking for the plain-English version? Go to [[wip-simple-workflow]].
+
 Two records carry the workflow: the **deal** runs the 8-stage BPF in CRM; the
 **`kf_WIP` line** runs the finance ladder **WIP → Billed → Paid / Lost** under its
 parent `kf_Instruction`.
