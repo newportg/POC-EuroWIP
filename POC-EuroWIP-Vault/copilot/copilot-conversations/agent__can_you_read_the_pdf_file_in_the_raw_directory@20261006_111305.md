@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_eef4d6416ffe81GfQYxLXEc6Wv"
 agentLabel: "Answering open questions from PDF"
-usage: '{"usedTokens":74701,"contextWindow":200000,"updatedAt":1791295191106}'
+usage: '{"usedTokens":90669,"contextWindow":200000,"updatedAt":1791296076832}'
 tags:
   - copilot-conversation
 ---
@@ -107,3 +107,49 @@ I kept the detailed page — [[wip-high-level-workflow]] and the rest of the wik
 
 If you'd rather go further, I can cut the wiki down overall — e.g. collapse the archimate views into the detail pages, or make the Dashboard a simple index. Just say the word.
 [Timestamp: 2026/10/06 14:58:54]
+
+**user**: can you create a page for the Mandate detailing what components it requires
+[Timestamp: 2026/10/06 15:09:40]
+
+**ai**: 
+
+The Mandate in this model is the signed `kf_Instruction` (type = Mandate) plus the stage on the deal BPF. Let me check the user-journey deck context and the automation requirements for anything else "mandate"-specific before writing the page.I have everything I need. Creating the page:Created **[[wip-mandate-components]]** (`wiki/wip-mandate-components.md`), committed as `docs: add mandate components page`.
+
+The page starts by disambiguating the two senses of "mandate" in the source — the **type** (`kf_Instruction.kf_instructiontype = Mandate`, the record WIP hangs off) and the **stage** (deal BPF S3) — then lists the components a mandate requires, in dependency order:
+
+1. **A service-line parent** — exactly one of the 12 lookups, picked by `kf_serviceline` (full mapping table included).
+2. **Two client accounts** — Brand/Group for the relationship, Legal Entity for the invoice (must exist by S3, filtered to Legal Entity).
+3. **Identity and status** — type, serviceline, `Active` status, owning office (which also drives VAT), start date.
+4. **The signing event** — `kf_signeddate`, the WIP-entry gate and the *On Mandate* fee trigger.
+5. **Commercials** — expected revenue, fee schedule for CM, direct fee fields for the other eleven lines.
+6. **Property** — single `kf_propertyid` or the `kf_DealProperty` junction for portfolios.
+7. **Finance controls** — local system name/ref, finance project ID (Phase 7 cargo).
+
+It closes with what the mandate unlocks (WIP creation via PL-2, billing) and the three open conflicts that touch it (Q3 field reconciliation, Q9 inferred gate, and the "Mandate vs Instruction" stage-naming discrepancy) — flagged rather than guessed, per the vault rule.
+
+Wired into [[wip-project-overview]]'s entry points and cross-linked from [[wip-instruction-model]], which is its natural parent page.
+
+One thing to note: for non-CM service lines (OSS, Leasing, Property Management, etc.) the "mandate" is effectively a lighter-read of the same component list — only CM has the deal BPF and fee schedule behind it. The page marks where that happens, so nobody assumes all mandates carry a fee schedule.
+[Timestamp: 2026/10/06 15:09:40]
+
+**user**: can you describe the mandate components as a diagram
+[Timestamp: 2026/10/06 15:13:11]
+
+**ai**: I'll add the component diagram to the existing [[wip-mandate-components]] page rather than create a new page — it fits where the components are already described.Added the diagram to [[wip-mandate-components]] — committed as `docs: add mandate components diagram`.
+
+It's a mermaid flowchart (renders natively in Obsidian) showing the mandate record as the hub with the seven numbered components fanning out, and one "valid mandate unlocks" arrow at the bottom collecting all seven:
+
+1. **Service-line parent** — exactly one of 12 lookups, set by `kf_serviceline`
+2. **Two client accounts** — Brand/Group + Legal Entity (by S3)
+3. **Identity & status** — type, serviceline, owning office (→ VAT), start date
+4. **Signing event** — `kf_signeddate`, the WIP gate
+5. **Commercials** — expected revenue, fee schedule, direct fees
+6. **Property** — `kf_propertyid` / `kf_DealProperty`
+7. **Finance controls** — Phase 7 fields
+
+…converging on what a complete mandate unlocks: WIP line creation (PL-2) and billing.
+
+I kept it on the existing page under an "At a glance" heading — the detailed sections below it now read as the explanation of the picture, so nothing new was added to the wiki's page count.
+
+If you'd rather have this as an interactive Obsidian Canvas (drag-n-drop nodes instead of a code block), say the word and I'll generate a `.canvas` file from the same layout.
+[Timestamp: 2026/10/06 15:13:11]
