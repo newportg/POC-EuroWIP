@@ -39,6 +39,14 @@ WIP business rules. The conditional invoice requirements have no home.
 `kf_fin_localsystemname`) back to `kf_WIP`, or move the required-at-Billed ERP
 reference onto `kf_Instruction`.
 
+**PDF evidence (2026-10-06):** the architecture review deck gives a third,
+slide-level `KF_WIP` field list — `kf_wipid`, `kf_parenttype`, `kf_instructionid`,
+`kf_netfeetogroup`, `kf_officeretained`, `kf_probability`, `kf_grossfee`,
+`kf_reportingmonth`, `kf_wipstatus`, `kf_invoicenumber`, **`kf_fin_localsystemref`**.
+The ERP cross-reference is present; `kf_feescheduleid` and `kf_fin_localsystemname`
+are absent. The deck is a working hypothesis, not a spec, but it sides with option A
+— keep the reference on `kf_WIP`.
+
 ---
 
 ## 2. PL-1 and the loss cascades assume the old 13-lookup parent model — blocking
@@ -99,6 +107,17 @@ list is otherwise the complete CM deep-build table set.
 
 **Decision needed:** confirm both tables are activated in Phase 0 (alongside the other
 Layer 2 tables), and add them to the list.
+
+**PDF evidence (2026-10-06):** the architecture review deck puts WIP squarely in MVP
+scope, so the omission is a list error rather than a scope statement:
+
+- CRM Lite requirements: *"Full pipeline visibility with built-in WIP data"*
+- Capital Markets requirements: *"WIP aging alerts and monthly reconciliation"*
+- Scope table, MVP column: finance is *"Manual (Finance Admin)"* — the CRM still
+  holds the WIP data in the MVP; the centralised EU ERP is a future phase
+
+The decision is now supported by a second source; it still needs the programme
+owner's confirmation before the activation list is amended.
 
 ---
 
@@ -183,6 +202,13 @@ legal entity required before billing — are **not in the source**.
 **Decision needed:** can stage gates target `kf_WIP`/`kf_Instruction`, or must the
 equivalent controls be implemented as business rules instead?
 
+**PDF evidence (2026-10-06):** the deck's regulatory-gate slide fires every gate on
+the deal BPF stages (S2–S8: conflict check, KYC, city pre-emption, notarial process,
+right of refusal, completion), and treats WIP as *driven by* the BPF (% complete per
+stage) rather than as a gate target. Consistent with the workbook's non-WIP
+`kf_targettable` examples; no answer to whether `kf_StageGateRule` *may* target WIP
+tables, but the design leans to rules-on-BPF.
+
 ---
 
 ## 10. The nine Phase 7 integration flows are not enumerated — medium
@@ -190,6 +216,25 @@ equivalent controls be implemented as business rules instead?
 Phase 7 is described only as *"Consolidated Finance ERP, activates 9 integration
 flows"*. The flows are not listed anywhere. For the WIP project this is the
 definition of the target state.
+
+**PDF evidence (2026-10-06):** the deck's WIP slide names six flow behaviours for
+the first time, but not as a numbered list of nine:
+
+- **Flow 1** — S3 fires creation of the Finance project
+- Each stage change updates % complete in Finance
+- Deal won raises a draft invoice request
+- Invoice and payment data returns within hours
+- A monthly batch refreshes WIP balance and ageing
+- A credit hold alerts the broker in Teams
+
+The paired mapping table (CRM → Finance) is: `kf_WIP` line ↔ project,
+`kf_FeeSchedule` ↔ project budget/contract line, BPF stage ↔ % complete,
+Won ↔ milestone/invoice request, Account ↔ customer (debtor).
+
+So six of the flows now have concrete shape; the gap shrinks from "no definition"
+to "workbook does not enumerate all nine / reconcile the numbering". Slight tension
+to note: the same deck puts MVP finance as *"Manual (Finance Admin)"* with the
+centralised EU ERP as future — the D365 requirement in the Workbook needs a phase.
 
 ---
 
@@ -209,6 +254,10 @@ the mapping determines the primary WIP reporting dimension. Not given.
 
 Retained on `kf_WIP` with note *"Parent object type — auto-set by plugin"*, but the
 parent is now a single `kf_Instruction`. The choice values are not given.
+
+**PDF evidence (2026-10-06):** the deck's `KF_WIP` field list also carries
+`kf_parenttype` without values or a purpose note — the field is not being dropped in
+the review, but the question stands.
 
 ---
 
@@ -247,3 +296,9 @@ entry; PL-2 covers only the classification fields, not the financials.
 | 12 | `kf_parenttype` purpose | Low | Data model owner |
 | 13 | SharePoint migration plan | Risk | Programme |
 | 14 | `kf_grossfee` derivation | Low | Finance |
+
+**PDF update (2026-10-06):** new evidence from `raw/European CRM Architecture Review
+2.pdf` logged under Q1 (ERP ref kept on `kf_WIP`), Q4 (WIP confirmed in MVP scope),
+Q9 (gates fire on the deal BPF, not WIP), Q10 (six of nine flows now named), Q12
+(`kf_parenttype` retained, no values). None of the decisions are closed yet; the
+entries above record evidence, not resolutions.
