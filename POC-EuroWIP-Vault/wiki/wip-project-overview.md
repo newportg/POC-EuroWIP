@@ -129,6 +129,7 @@ while the Master Table Index marks both as MVP. Recorded in
 - [[wip-high-level-workflow]] — the end-to-end workflow, from mandate to paid
 - [[wip-table-specification]] — every `kf_WIP` column, status lifecycle, conditional requirements
 - [[wip-instruction-model]] — the parent, and the 13 service-line lookups
+- [[wip-mandate-components]] — what a mandate requires before it is valid
 - [[wip-automation-requirements]] — PL-1…4, FL-1…6, BR-1…6, DD-1
 - [[wip-period-locking-and-aging]] — reporting month, period lock, stale flags
 - [[wip-finance-erp-integration]] — invoice fields, VAT, local systems, Phase 7

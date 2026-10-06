@@ -141,3 +141,8 @@ presentational.
 `kf_DealProperty` also anchors two optional CM children that are WIP-adjacent:
 `kf_DDMilestone.kf_dealpropertyid` and `kf_RedFlag.kf_dealpropertyid` — both
 *"property-specific"* within a portfolio deal.
+
+---
+
+See [[wip-mandate-components]] for what the **Mandate** subtype of this table
+requires in practice.
