@@ -199,8 +199,16 @@
       "copilot:Open Copilot Agent Chat": false
     }
   },
-  "active": "f930108c062aead0",
+  "active": "f45f33bb81cb2350",
   "lastOpenFiles": [
+    "copilot/copilot-conversations/agent__can_you_read_the_pdf_file_in_the_raw_directory@20261006_111305.md",
+    "wiki/wip-automation-requirements.md",
+    "wiki/wip-reporting-and-kpis.md",
+    "wiki/wip-rollout-plan.md",
+    "wiki/wip-delivery-backlog.md",
+    "wiki/wip-crm-dependencies.md",
+    "wiki/wip-open-questions.md",
+    "Dashboard.md",
     "wiki/archimate/wip-application-composition.md",
     "wiki/wip-table-specification.md",
     "wiki/wip-instruction-model.md",
@@ -228,14 +236,6 @@
     "POC/wip-poc/node_modules/source-map-js/README.md",
     "POC/wip-poc/node_modules/picomatch/README.md",
     "POC/wip-poc/node_modules/esbuild/README.md",
-    "POC/wip-poc/node_modules/@sveltejs/acorn-typescript/LICENSE.md",
-    "Dashboard.md",
-    "README.md",
-    "AGENTS.md",
-    "wiki/archimate/wip-archimate-index.md",
-    "wiki/archimate/wip-monthly-cycle.md",
-    "wiki/archimate/wip-system-landscape.md",
-    "wiki/archimate/wip-lifecycle.md",
-    "wiki/wip-period-locking-and-aging.md"
+    "POC/wip-poc/node_modules/@sveltejs/acorn-typescript/LICENSE.md"
   ]
 }
