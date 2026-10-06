@@ -21,6 +21,23 @@ uses the word in two senses, and both matter to WIP:
 This page covers the type. A mandate record that is missing any "Required" component
 below is a build error, not a data gap.
 
+## At a glance
+
+The same seven components, as a picture:
+
+```mermaid
+flowchart TD
+    M["The Mandate<br/>kf_Instruction<br/>type = Mandate · status = Active"]
+    M --> P["1 · Service-line parent<br/>exactly one of 12 lookups,<br/>set by kf_serviceline"]
+    M --> AC["2 · Two client accounts<br/>Brand / Group (relationship)<br/>Legal Entity — invoice (by S3)"]
+    M --> ID["3 · Identity and status<br/>type · serviceline · owning office<br/>(drives VAT) · start date"]
+    M --> SG["4 · The signing event<br/>kf_signeddate — WIP-entry gate,<br/>'On Mandate' fee trigger"]
+    M --> CO["5 · Commercials<br/>expected revenue · fee schedule (CM)<br/>· direct fee fields (other lines)"]
+    M --> PR["6 · Property<br/>kf_propertyid — single<br/>kf_DealProperty — portfolios"]
+    M --> FI["7 · Finance controls — Phase 7<br/>local system name · ref<br/>· finance project id"]
+    P & AC & ID & SG & CO & PR & FI --> U["Valid mandate unlocks<br/>WIP line creation (PL-2)<br/>and billing"]
+```
+
 ## 1. A service-line parent — required
 
 Exactly one parent lookup populated, determined by `kf_serviceline`. For Capital
