@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_eef4d6416ffe81GfQYxLXEc6Wv"
 agentLabel: "Answering open questions from PDF"
-usage: '{"usedTokens":70846,"contextWindow":200000,"updatedAt":1791294753454}'
+usage: '{"usedTokens":74701,"contextWindow":200000,"updatedAt":1791295191106}'
 tags:
   - copilot-conversation
 ---
@@ -89,3 +89,21 @@ Two things I logged along the way rather than glossing over:
 
 I also added the new page at the top of the entry points in [[wip-project-overview]], so it's reachable from the hub. The Dashboard's wiki index will pick it up automatically (it's typed `spec`).
 [Timestamp: 2026/10/06 14:49:08]
+
+**user**: the wiki is way to complex can you create a simple workflow
+[Timestamp: 2026/10/06 14:58:54]
+
+**ai**: 
+
+Done — created [[wip-simple-workflow]] (`wiki/wip-simple-workflow.md`).
+
+It's the same loop in plain English, nothing else:
+
+- A linear flow diagram: **Mandate signed → WIP record created → Updated monthly → Invoice issued (Billed) → Payment received (Paid)**, with one "Lost" branch for jobs that stop partway.
+- Five short steps, no field names, no automation IDs, no open questions.
+- A three-line "monthly habit" (month-end review, lock on the 15th, quiet jobs get chased).
+
+I kept the detailed page — [[wip-high-level-workflow]] and the rest of the wiki now have a one-line pointer to the simple version, and the simple page is the first entry point in [[wip-project-overview]]. The detailed page links down to it too, so it's a plain-English on-ramp rather than more clutter. Committed as `docs: add plain-English WIP workflow page`.
+
+If you'd rather go further, I can cut the wiki down overall — e.g. collapse the archimate views into the detail pages, or make the Dashboard a simple index. Just say the word.
+[Timestamp: 2026/10/06 14:58:54]
