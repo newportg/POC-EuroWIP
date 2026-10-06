@@ -3,7 +3,9 @@ type: open-questions
 area: wip
 status: open
 source: raw/EU CRM Data Model.xlsx
+also: raw/European CRM Architecture Review 2.pdf
 extracted: 2026-09-28
+pdf-evidence: 2026-10-06
 ---
 
 # WIP Open Questions and Spec Conflicts
