@@ -363,7 +363,11 @@
   "agentMode": {
     "byok": {},
     "activeBackend": "opencode",
-    "backends": {},
+    "backends": {
+      "opencode": {
+        "defaultMode": "default"
+      }
+    },
     "debugFullFrames": true,
     "notificationSound": true,
     "notificationSoundId": "piano",
