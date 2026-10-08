@@ -490,6 +490,15 @@
       },
       "configuredModelId": "b6492b5a-6735-4a56-9876-a62fd09d732c",
       "configuredAt": 1791281455334
+    },
+    {
+      "providerId": "ba6c506c-baa8-4d6f-acd6-9d309ba352e7",
+      "info": {
+        "id": "opencode/exo-free",
+        "displayName": "OpenCode Zen/Exo Free"
+      },
+      "configuredModelId": "849b3758-e10e-40a2-b83c-ce6b9abe0b68",
+      "configuredAt": 1791363640940
     }
   ],
   "backends": {
