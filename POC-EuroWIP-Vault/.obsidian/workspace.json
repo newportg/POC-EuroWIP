@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "6283492530c35fcc",
+        "id": "ef2b4457254da544",
         "type": "tabs",
         "children": [
           {
-            "id": "f930108c062aead0",
+            "id": "10e380a386a9e4f6",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "wiki/archimate/wip-system-landscape.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "wip-system-landscape"
+              "title": "New tab"
             }
           }
         ]
@@ -199,8 +195,11 @@
       "copilot:Open Copilot Agent Chat": false
     }
   },
-  "active": "f930108c062aead0",
+  "active": "f45f33bb81cb2350",
   "lastOpenFiles": [
+    "wiki/archimate/wip-system-landscape.md",
+    "POC/wip-poc/dist/assets/index-BsbKZUKG.js",
+    "POC/wip-poc/dist/assets/index-2pkGPA7F.js",
     "wiki/archimate/wip-monthly-cycle.md",
     "wiki/archimate/wip-lifecycle.md",
     "wiki/archimate/wip-archimate-index.md",
@@ -227,14 +226,11 @@
     "copilot/copilot-conversations/agent__can_you_reorder_the_app_so_that_create_appears_before@20261008_154229.md",
     "README.md",
     "raw/European CRM Architecture Review 2.pdf",
-    "wiki/archimate/wip-system-landscape.md",
     "copilot/copilot-conversations/agent__can_you_read_the_pdf_file_in_the_raw_directory@20261006_111305.md",
     "Dashboard.md",
     "POC/wip-poc/dist/assets/index-DVUZ4RIc.js",
     "POC/wip-poc/preview.err",
     "POC/wip-poc/preview.log",
-    "POC/wip-poc/dist/assets/index-Dng3w_Ic.js",
-    "POC/wip-poc/dist/assets/index-Bo2jpwsC.css",
-    "POC/wip-poc/node_modules/esm-env/true.js"
+    "POC/wip-poc/dist/assets/index-Dng3w_Ic.js"
   ]
 }

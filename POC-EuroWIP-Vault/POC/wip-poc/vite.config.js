@@ -16,10 +16,8 @@ export default defineConfig({
     // The SQLite wasm blob is ~650 kB; inlining it would bloat the JS chunk.
     assetsInlineLimit: 4096
   },
-  optimizeDeps: { exclude: ['sql.js'] },
-  resolve: {
-    alias: {
-      'sql.js': 'sql.js/dist/sql-wasm-browser.js'
-    }
+  optimizeDeps: {
+    exclude: ['sql.js'],
+    include: ['sql.js/dist/sql-wasm.js']
   }
 });

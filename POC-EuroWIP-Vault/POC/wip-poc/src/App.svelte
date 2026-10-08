@@ -62,6 +62,7 @@
   function viewInWip(name) {
     filters = { ...filters, search: name, status: '', staleOnly: false };
     tab = 'dashboard';
+    selectedId = null;
   }
 </script>
 
