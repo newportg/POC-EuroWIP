@@ -499,6 +499,15 @@
       },
       "configuredModelId": "849b3758-e10e-40a2-b83c-ce6b9abe0b68",
       "configuredAt": 1791363640940
+    },
+    {
+      "providerId": "ba6c506c-baa8-4d6f-acd6-9d309ba352e7",
+      "info": {
+        "id": "opencode/step-5-preview-free",
+        "displayName": "OpenCode Zen/Step 5 Preview Free"
+      },
+      "configuredModelId": "619d295a-3afc-4fa7-81c7-2a4d2c5987b3",
+      "configuredAt": 1791470322599
     }
   ],
   "backends": {

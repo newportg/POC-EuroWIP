@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "wiki/wip-mandate-components.md",
+                "file": "wiki/wip-simple-workflow.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "wip-mandate-components"
+              "title": "wip-simple-workflow"
             }
           }
         ]
@@ -199,8 +199,10 @@
       "copilot:Open Copilot Agent Chat": false
     }
   },
-  "active": "f930108c062aead0",
+  "active": "f45f33bb81cb2350",
   "lastOpenFiles": [
+    "copilot/copilot-conversations/agent__can_you_reorder_the_app_so_that_create_appears_before@20261008_154229.md",
+    "wiki/wip-mandate-components.md",
     "wiki/wip-automation-requirements.md",
     "wiki/wip-crm-dependencies.md",
     "wiki/wip-delivery-backlog.md",
@@ -217,7 +219,6 @@
     "wiki/wip-table-specification.md",
     "wiki/wip-taxonomy-inputs.md",
     "README.md",
-    "wiki/wip-mandate-components.md",
     "raw/European CRM Architecture Review 2.pdf",
     "wiki/archimate/wip-system-landscape.md",
     "wiki/archimate/wip-monthly-cycle.md",
@@ -227,7 +228,6 @@
     "copilot/copilot-conversations/agent__can_you_read_the_pdf_file_in_the_raw_directory@20261006_111305.md",
     "Dashboard.md",
     "POC/wip-poc/README.md",
-    "copilot/copilot-conversations/agent__can_we_continue_where_we_ended_yesterday@20260929_090352.md",
     "POC/wip-poc/dist/assets/index-DVUZ4RIc.js",
     "POC/wip-poc/preview.err",
     "POC/wip-poc/preview.log",
