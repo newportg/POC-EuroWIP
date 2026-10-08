@@ -27,7 +27,7 @@ title kf_WIP Lifecycle — Business Flow (ArchiMate)
 left to right direction
 
 circle "Mandate signed\nkf_Instruction\nkf_signeddate" as signed <<Business Event>> #A9DCDF
-rectangle "Create WIP line\nPL-2 auto-populates\nclassification" as create <<Business Process>> #A9DCDF
+rectangle "Create Instruction\nthen Create WIP line\nPL-2 auto-populates\nclassification" as create <<Business Process>> #A9DCDF
 rectangle "kf_WIP record\nWIP-{SEQNUM:6}\nkf_reportingmonth required" as rec <<Business Object>> #A9DCDF
 
 circle "Status = WIP" as wip <<Business Event>> #A9DCDF

@@ -25,7 +25,7 @@ parent `kf_Instruction`.
 
 ```mermaid
 flowchart TD
-    M["Mandate signed<br/>kf_Instruction Active,<br/>kf_signeddate set"] --> W["Create WIP record<br/>PL-1 + PL-2 auto-populate<br/>classification from Instruction"]
+    M["Create Instruction<br/>Mandate signed<br/>kf_Instruction Active,<br/>kf_signeddate set"] --> W["Create WIP record<br/>PL-1 + PL-2 auto-populate<br/>classification from Instruction"]
     W --> A["Monthly accrual<br/>probability · gross fee · VAT ·<br/>kf_officeretained"]
     A --> MT["Month end<br/>reconcile · Power BI aging<br/>+ receivables"]
     MT --> L["Period lock — 15th of<br/>following month<br/>FL-4 · PL-4 rejects edits"]

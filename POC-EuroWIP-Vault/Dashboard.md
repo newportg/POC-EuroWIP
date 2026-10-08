@@ -1,4 +1,4 @@
-# Dashboard — EuroWIP
+# Dashboard (Initial Screen) — EuroWIP
 
 Requirements extracted from `raw/EU CRM Data Model.xlsx` (26/08/2026). WIP focus;
 CRM treated as dependency only.
