@@ -12,5 +12,5 @@ tags:
 [Timestamp: 2026/10/08 15:42:29]
 
 **ai**: Let me start by understanding the full workflow - I need to see wip-high-level-workflow.md and also look for "create" in the context of the app structure.
-
+Let us look around for "app", "screen", "initial", "create" in UI context.
 [Timestamp: 2026/10/08 15:42:29]
