@@ -272,30 +272,29 @@ try {
         submit(wipForm);
         await sleep(600);
 
-        // On success the panel deliberately routes to the WIP tab, filtered to
-        // the new line, which unmounts this form. The "Created WIP-000000"
-        // confirmation is therefore already gone by the time we look for it, so
-        // assert on what the user is left looking at instead.
-        const onWipTab = [...document.querySelectorAll('nav .tab')]
-          .some(b => b.textContent.trim() === 'WIP' && b.classList.contains('active'));
+        // On success the panel routes to the dashboard (initial screen), filtered to
+        // the new line. The "Created WIP-000000" confirmation is therefore already
+        // gone by the time we look for it, so assert on what the user is left looking at instead.
+        const onDashboardTab = [...document.querySelectorAll('nav .tab')]
+          .some(b => b.textContent.trim() === 'Dashboard' && b.classList.contains('active'));
         const bodyRows = [...document.querySelectorAll('tbody tr')];
         // [0], not [1]: the pattern has no capture group, so the whole match is
         // the reference.
-        const wipRef = bodyRows[0]?.textContent.match(/WIP-\\d{6}/)?.[0] ?? null;
+        const wipRef = bodyRows[0]?.textContent.match(/WIP-\d{6}/)?.[0] ?? null;
         const searchBox = document.querySelector('input.search')?.value ?? null;
 
-        if (!onWipTab) {
+        if (!onDashboardTab) {
           // Staying put means the submit was refused; surface the rule's reason.
           return { error: 'WIP line was not created', snippet: text().slice(0, 300) };
         }
         if (!wipRef) {
-          return { error: 'routed to WIP but the new line is not listed',
+          return { error: 'routed to Dashboard but the new line is not listed',
                    rows: bodyRows.length, search: searchBox,
                    rowText: (bodyRows[0]?.textContent ?? '(none)').slice(0, 200),
                    snippet: text().slice(0, 300) };
         }
         const rowVisible = bodyRows.some(tr => tr.textContent.includes(wipRef));
-        return { ref, wipRef, onWipTab, rowVisible, listed: bodyRows.length, text: text().slice(0, 260) };
+        return { ref, wipRef, onDashboardTab, rowVisible, listed: bodyRows.length, text: text().slice(0, 260) };
       })()`
     });
 
@@ -311,7 +310,7 @@ try {
       console.log(`\ncreation flow`);
       console.log(`  instruction created: ${flow.ref}`);
       console.log(`  WIP line created:    ${flow.wipRef}`);
-      console.log(`  routed to WIP tab:   ${flow.onWipTab ? 'yes' : 'NO'}`);
+      console.log(`  routed to Dashboard tab: ${flow.onDashboardTab ? 'yes' : 'NO'}`);
       console.log(`  new row visible:     ${flow.rowVisible ? 'yes' : 'NO'}`);
       console.log(`  rows after filter:   ${flow.listed}`);
     }

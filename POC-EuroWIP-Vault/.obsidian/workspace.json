@@ -199,8 +199,9 @@
       "copilot:Open Copilot Agent Chat": false
     }
   },
-  "active": "f930108c062aead0",
+  "active": "f45f33bb81cb2350",
   "lastOpenFiles": [
+    "POC/wip-poc/dist/assets/index-3beSBclk.js",
     "wiki/wip-simple-workflow.md",
     "copilot/copilot-conversations/agent__can_you_reorder_the_app_so_that_create_appears_before@20261008_154229.md",
     "wiki/wip-mandate-components.md",
@@ -227,7 +228,6 @@
     "wiki/archimate/wip-archimate-index.md",
     "copilot/copilot-conversations/agent__can_you_read_the_pdf_file_in_the_raw_directory@20261006_111305.md",
     "Dashboard.md",
-    "POC/wip-poc/README.md",
     "POC/wip-poc/dist/assets/index-DVUZ4RIc.js",
     "POC/wip-poc/preview.err",
     "POC/wip-poc/preview.log",
