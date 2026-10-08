@@ -61,7 +61,7 @@
   /** Jump from a newly created record to it in the WIP list. */
   function viewInWip(name) {
     filters = { ...filters, search: name, status: '', staleOnly: false };
-    tab = 'wip';
+    tab = 'dashboard';
   }
 </script>
 
@@ -101,7 +101,7 @@
   </nav>
 
   <main>
-    {#if tab === 'wip'}
+    {#if tab === 'dashboard'}
       <KpiBar kpi={kpi} currencyNote={currencyNote} />
 
       {#if month && pipeline.length}
@@ -139,8 +139,9 @@
           <WipDetail line={selected} onclose={() => (selectedId = null)} onchanged={bump} />
           {#if !selected}
             <div class="card hint">
-              <h2 style="margin-bottom:8px">Try this</h2>
+              <h2 style="margin-bottom:8px">Quick actions</h2>
               <ol style="margin:0;padding-left:18px;font-size:12px;line-height:1.8">
+                <li>Go to <strong>Create</strong> to create an Instruction first, then a WIP record.</li>
                 <li>Open a line and press <strong>Bill it</strong> with the fields empty — the invoice-requirement rule rejects it.</li>
                 <li>Fill the invoice fields and bill a line under 30% probability — it succeeds and raises the FL-5 alert.</li>
                 <li>Go to <strong>Controls</strong> and lock a reporting month, then try to edit one of its lines.</li>
@@ -148,6 +149,44 @@
               </ol>
             </div>
           {/if}
+        </div>
+      </div>
+    {:else if tab === 'wip'}
+      <KpiBar kpi={kpi} currencyNote={currencyNote} />
+
+      {#if month && pipeline.length}
+        <div class="card" style="margin-top:12px">
+          <h3 style="margin-bottom:8px">Open pipeline by service line</h3>
+          <table>
+            <thead>
+              <tr><th>Service line</th><th class="num">Lines</th><th class="num">Gross</th><th class="num">Weighted retained</th></tr>
+            </thead>
+            <tbody>
+              {#each pipeline as p (p.service_line)}
+                <tr class="nodrag">
+                  <td>{p.service_line}</td>
+                  <td class="num">{p.lines}</td>
+                  <td class="num">{new Intl.NumberFormat('en-GB').format(p.gross)}</td>
+                  <td class="num" style="color:#79b0ff">{new Intl.NumberFormat('en-GB').format(p.weighted)}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
+
+      <div class="work" style="margin-top:12px">
+        <div>
+          <WipTable
+            {rows}
+            {offices}
+            {filters}
+            {selectedId}
+            onselect={(id) => (selectedId = id)}
+          />
+        </div>
+        <div>
+          <WipDetail line={selected} onclose={() => (selectedId = null)} onchanged={bump} />
         </div>
       </div>
     {:else if tab === 'create'}
