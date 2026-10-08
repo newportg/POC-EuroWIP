@@ -6,7 +6,7 @@ source: raw/EU CRM Data Model.xlsx
 extracted: 2026-09-28
 ---
 
-# WIP Period Locking, Reporting Month and Aging
+# WIP Period Locking, Reporting Month and Ageing
 
 This is the requirement set that replaces the mechanics of the SharePoint "WIP &
 Billed" template. It governs *when* a WIP number becomes final.
