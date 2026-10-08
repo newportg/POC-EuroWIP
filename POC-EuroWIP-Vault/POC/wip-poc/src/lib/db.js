@@ -1,5 +1,7 @@
-import initSqlJs from 'sql.js';
-import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
+import sqlJs from 'sql.js/dist/sql-wasm-browser.js';
+import wasmUrl from 'sql.js/dist/sql-wasm-browser.wasm?url';
+
+const initSqlJs = sqlJs;
 import { SCHEMA_SQL, SCHEMA_VERSION } from './schema.js';
 import { buildSeed } from './seed.js';
 
