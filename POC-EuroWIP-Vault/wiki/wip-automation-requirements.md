@@ -39,7 +39,7 @@ Auto-populate on create, from the parent Instruction: `kf_serviceline`,
 `kf_sector`, `kf_clientaccountid`, `kf_negotiatorid`, `kf_owningoffice`,
 `kf_transactiontype`, and the transaction currency. This is what makes flat finance
 reporting possible without joins. Note `kf_instructionid` itself must exist before
-PL-2 can run — a create-form ordering requirement.
+PL-2 can run — requires creating the Instruction first, then creating the WIP record. Create Instruction before Create WIP.
 
 ### PL-3 — probability change tracking
 

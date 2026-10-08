@@ -25,7 +25,7 @@ parent `kf_Instruction`.
 
 ```mermaid
 flowchart TD
-    M["Mandate signed<br/>kf_Instruction Active,<br/>kf_signeddate set"] --> W["WIP line created<br/>PL-1 + PL-2 auto-populate<br/>classification from Instruction"]
+    M["Mandate signed<br/>kf_Instruction Active,<br/>kf_signeddate set"] --> W["Create WIP record<br/>PL-1 + PL-2 auto-populate<br/>classification from Instruction"]
     W --> A["Monthly accrual<br/>probability · gross fee · VAT ·<br/>kf_officeretained"]
     A --> MT["Month end<br/>reconcile · Power BI aging<br/>+ receivables"]
     MT --> L["Period lock — 15th of<br/>following month<br/>FL-4 · PL-4 rejects edits"]
@@ -51,7 +51,7 @@ flowchart TD
 | Stage | Trigger | What happens | Controls |
 | --- | --- | --- | --- |
 | Instruction Active | Mandate signed (`kf_signeddate`) | `kf_Instruction` opened with `kf_instructionstatus = Active`; `kf_legalentityaccountid` must exist by Mandate (S3) | WIP entry gate: Active + signed date ([[wip-stage-gates]], inferred) |
-| WIP line created | Instruction created, or recurring fee trigger | PL-2 auto-populates classification from the parent; `kf_reportingmonth` = 1st of month | PL-1 parent validation — now single-parent, see Q2 |
+| Create WIP record | Instruction created, or recurring fee trigger | PL-2 auto-populates classification from the parent; `kf_reportingmonth` = 1st of month | PL-1 parent validation — now single-parent, see Q2 |
 | Monthly accrual | Each month | Probability, `kf_grossfee`, VAT (BU default: FR 20 / ES 21 / UK 20), `kf_officeretained` | `kf_weightedofficeretained = officeretained × probability / 100`; FL-6 reminder to negotiators |
 | Reconciliation | Month end | Power BI aging + receivables refresh | — |
 | Period lock | 15th of following month | `kf_periodlocked = Yes`; locked-field edits rejected | FL-4, PL-4 — locked field set unstated, Q5 |

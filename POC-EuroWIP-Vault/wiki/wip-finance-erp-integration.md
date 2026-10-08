@@ -82,7 +82,7 @@ Present on `kf_Instruction` in the authoritative Core definition. Present on
 
 **The three-phase office landscape:** Phase 1 goes live in **Paris** (Paris CM Deep
 Build), Phase 2 adds **Madrid** and EIT. The local-system choice anticipates that a
-WIP line created in Madrid books to a different ledger than one created in Paris.
+Create WIP record in Madrid books to a different ledger than one created in Paris.
 
 ## Deferred ERP integration
 

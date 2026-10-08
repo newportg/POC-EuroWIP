@@ -17,7 +17,7 @@ automation IDs, no unresolved questions.
 
 ```mermaid
 flowchart LR
-    A["1. Mandate signed"] --> B["2. WIP record created"]
+    A["1. Mandate signed"] --> B["2. Create WIP record"]
     B --> C["3. Updated every month"]
     C --> D["4. Invoice issued"]
     D --> E["5. Payment received"]
@@ -30,7 +30,7 @@ flowchart LR
 
 1. **Mandate signed** — the client agrees to the work. Nothing is tracked as WIP
    before this.
-2. **WIP record created** — an entry is opened for the job: who the client is, what
+2. **Create WIP record** — an entry is opened for the job: who the client is, what
    the fee is, which team is on it.
 3. **Updated every month** — the person running the job updates it: how likely it
    is to happen, and what it's worth now. This keeps the pipeline truthful.
