@@ -12,7 +12,7 @@
   let ready = $state(false);
   let fatal = $state('');
   let version = $state(0);
-  let tab = $state('wip');
+  let tab = $state('dashboard');
   let month = $state('');
   let selectedId = $state(null);
 
@@ -93,8 +93,9 @@
   </header>
 
   <nav>
-    <button class="tab" class:active={tab === 'wip'} onclick={() => (tab = 'wip')}>WIP</button>
+    <button class="tab" class:active={tab === 'dashboard'} onclick={() => (tab = 'dashboard')}>Dashboard</button>
     <button class="tab" class:active={tab === 'create'} onclick={() => (tab = 'create')}>Create</button>
+    <button class="tab" class:active={tab === 'wip'} onclick={() => (tab = 'wip')}>WIP</button>
     <button class="tab" class:active={tab === 'controls'} onclick={() => (tab = 'controls')}>Controls</button>
     <button class="tab" class:active={tab === 'model'} onclick={() => (tab = 'model')}>Model &amp; questions</button>
   </nav>
