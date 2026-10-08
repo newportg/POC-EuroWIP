@@ -11,5 +11,6 @@ tags:
 **user**: can you reorder the app so that create appears before WIP as that is where it logically should be. also can you create a dashboard as the initial screen
 [Timestamp: 2026/10/08 15:42:29]
 
-**ai**: 
+**ai**: Let me start by understanding the full workflow - I need to see wip-high-level-workflow.md and also look for "create" in the context of the app structure.
+
 [Timestamp: 2026/10/08 15:42:29]
