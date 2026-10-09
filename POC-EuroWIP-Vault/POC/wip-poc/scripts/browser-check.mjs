@@ -141,7 +141,7 @@ try {
   }
 
   if (state?.state === 'ready') {
-    console.log(`table rows rendered: ${state.rows}`);
+    console.log(`tbody rows on Dashboard (totals tables): ${state.rows}`);
     const probe = await send('Runtime.evaluate', {
       expression: `(() => {
         // innerText reflects CSS text-transform, so the KPI captions come back
@@ -164,13 +164,26 @@ try {
     });
     const p = probe.result.value;
     console.log(`\nrendered content`);
-    console.log(`  WIP line identifiers: ${p.hasWipLine ? 'present' : 'MISSING'}`);
+    console.log(`  WIP line list on Dashboard: ${p.hasWipLine ? 'present (unexpected)' : 'absent (lives on the WIP tab)'}`);
     console.log(`  in-hand KPI:          ${p.kpiInHand ?? 'missing'}`);
     console.log(`  weighted retained:    ${p.kpiWeighted ?? 'missing'}`);
     console.log(`  stale lines:          ${p.stale ?? 'missing'}`);
     console.log(`  mixed-currency notice: ${p.currencyWarning ? 'shown' : 'not shown'}`);
     console.log(`  breakdown tables:     status ${p.hasStatusTotals ? 'yes' : 'NO'}, office ${p.hasOfficeTotals ? 'yes' : 'NO'}, service line ${p.hasServiceLineTotals ? 'yes' : 'NO'}`);
     console.log(`  tabs: ${p.tabs.join(' | ')}`);
+
+    // The line list lives on the WIP tab, so switch there before selecting.
+    const wipTab = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const b = [...document.querySelectorAll('nav .tab')]
+          .find(x => x.textContent.trim() === 'WIP');
+        if (!b) return 'tab not found';
+        b.click();
+        return 'clicked';
+      })()`,
+      returnByValue: true
+    });
+    await sleep(400);
 
     // Exercise a rule rejection through the real UI path.
     const click = await send('Runtime.evaluate', {
@@ -184,7 +197,8 @@ try {
       returnByValue: true
     });
     await sleep(400);
-    console.log(`\nrow selection: ${click.result.value}`);
+    console.log(`\ntab "WIP": ${wipTab.result.value}`);
+    console.log(`row selection: ${click.result.value}`);
     const detail = await send('Runtime.evaluate', {
       expression: `(() => {
         const text = document.getElementById('app').innerText;
@@ -276,24 +290,26 @@ try {
         submit(wipForm);
         await sleep(600);
 
-        // On success the panel routes to the dashboard (initial screen), filtered to
-        // the new line. The "Created WIP-000000" confirmation is therefore already
-        // gone by the time we look for it, so assert on what the user is left looking at instead.
-        const onDashboardTab = [...document.querySelectorAll('nav .tab')]
-          .some(b => b.textContent.trim() === 'Dashboard' && b.classList.contains('active'));
+        // On success the panel routes to the WIP tab, filtered to the new line.
+        // The "Created WIP-000017" confirmation is therefore already gone by the
+        // time we look for it, so assert on what the user is left looking at instead.
+        const onWipTab = [...document.querySelectorAll('nav .tab')]
+          .some(b => b.textContent.trim() === 'WIP' && b.classList.contains('active'));
         const bodyRows = [...document.querySelectorAll('tbody tr')];
-        // [0], not [1]: the pattern has no capture group, so the whole match is
-        // the reference.
-        const wipRef = bodyRows[0]?.textContent.match(/WIP-\d{6}/)?.[0] ?? null;
+        // First row that actually carries a line reference: the totals tables
+        // render their own tbody rows above the line list.
+        const wipRef = bodyRows
+          .map(tr => tr.textContent.match(/WIP-\\d{6}/)?.[0])
+          .find(Boolean) ?? null;
         const searchBox = document.querySelector('input.search')?.value ?? null;
 
-        if (!onDashboardTab) {
+        if (!onWipTab) {
           // Staying put means the submit was refused; surface the rule's reason.
           return { error: 'WIP line was not created', snippet: text().slice(0, 300) };
         }
         // The row should be visible; sometimes rendering takes a tick. We'll check both
         const rowVisible = bodyRows.some(tr => tr.textContent.includes('WIP-000017'));
-        return { ref, wipRef, onDashboardTab, rowVisible, listed: bodyRows.length, search: searchBox };
+        return { ref, wipRef, onWipTab, rowVisible, listed: bodyRows.length, search: searchBox };
       })()`
     });
 
@@ -309,7 +325,7 @@ try {
       console.log(`\ncreation flow`);
       console.log(`  instruction created: ${flow.ref}`);
       console.log(`  WIP line created:    ${flow.wipRef}`);
-      console.log(`  routed to Dashboard tab: ${flow.onDashboardTab ? 'yes' : 'NO'}`);
+      console.log(`  routed to WIP tab:    ${flow.onWipTab ? 'yes' : 'NO'}`);
       console.log(`  new row visible:     ${flow.rowVisible ? 'yes' : 'NO'}`);
       console.log(`  rows after filter:   ${flow.listed}`);
     }

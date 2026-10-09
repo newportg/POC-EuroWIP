@@ -66,7 +66,7 @@
   /** Jump from a newly created record to it in the WIP list. */
   function viewInWip(name) {
     filters = { ...filters, search: name, status: '', staleOnly: false };
-    tab = 'dashboard';
+    tab = 'wip';
     selectedId = null;
   }
 </script>
@@ -119,33 +119,6 @@
 
     {#if tab === 'dashboard'}
       {@render overview()}
-
-      <div class="work" style="margin-top:12px">
-        <div>
-          <WipTable
-            {rows}
-            {offices}
-            {filters}
-            {selectedId}
-            onselect={(id) => (selectedId = id)}
-          />
-        </div>
-        <div>
-          <WipDetail line={selected} onclose={() => (selectedId = null)} onchanged={bump} />
-          {#if !selected}
-            <div class="card hint">
-              <h2 style="margin-bottom:8px">Quick actions</h2>
-              <ol style="margin:0;padding-left:18px;font-size:12px;line-height:1.8">
-                <li>Go to <strong>Create</strong> to create an Instruction first, then a WIP record.</li>
-                <li>Open a line and press <strong>Bill it</strong> with the fields empty — the invoice-requirement rule rejects it.</li>
-                <li>Fill the invoice fields and bill a line under 30% probability — it succeeds and raises the FL-5 alert.</li>
-                <li>Go to <strong>Controls</strong> and lock a reporting month, then try to edit one of its lines.</li>
-                <li>Withdraw an instruction on the <strong>Model</strong> tab's parent and watch the cascade.</li>
-              </ol>
-            </div>
-          {/if}
-        </div>
-      </div>
     {:else if tab === 'wip'}
       {@render overview()}
 
@@ -202,8 +175,6 @@
   .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
   main { padding: 18px 24px 40px; }
   .work { display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; align-items: start; }
-  .hint ol { color: var(--muted); }
-  .hint li { margin-bottom: 4px; }
   .loading, .fatal { padding: 60px 24px; text-align: center; }
   .fatal { color: var(--bad); }
   @media (max-width: 1100px) { .work { grid-template-columns: 1fr; } }
