@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EuroWIP — a guided tour</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --line: #2a2f3a;
+    --line-soft: #22262f;
+    --text: #e6e8ec;
+    --muted: #8b93a3;
+    --faint: #626b7d;
+    --accent: #4f8cff;
+    --accent-soft: #1d2c47;
+    --good: #3fb950;
+    --warn: #d29922;
+    --bad: #f85149;
+    --info: #a371f7;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --dur: 7200ms;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: radial-gradient(1200px 800px at 30% -10%, #17202f 0%, #0f1115 55%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #viewport { position: fixed; inset: 0; display: grid; place-items: center; }
+  #stage {
+    position: relative; width: 1600px; height: 1000px;
+    transform-origin: center center;
+    background: var(--bg);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 30px 90px rgba(0,0,0,.6), 0 0 0 1px var(--line);
+  }
+
+  /* progress + timer */
+  .progress { position: absolute; top: 0; left: 0; height: 3px; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--info));
+    transition: width .5s cubic-bezier(.4,0,.2,1); z-index: 60; }
+  .timer { position: absolute; left: 48px; bottom: 34px; width: 384px; height: 3px;
+    background: var(--line); border-radius: 3px; overflow: hidden; z-index: 40; }
+  .timer i { display: block; height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--info)); }
+  .stage-run .timer i { animation: fill var(--dur) linear forwards; }
+  .paused .timer i, .paused .kenburns, .paused .callout { animation-play-state: paused; }
+  @keyframes fill { from { width: 0%; } to { width: 100%; } }
+
+  /* slides */
+  .slide { position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    transition: opacity .6s ease; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  /* left caption column */
+  .cap { position: absolute; left: 48px; top: 120px; width: 384px; z-index: 30; }
+  .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); }
+  .cap h2 { margin: 12px 0 0; font-size: 34px; line-height: 1.15; letter-spacing: -.02em; }
+  .cap .sub { margin: 12px 0 0; font-size: 17px; color: var(--muted); line-height: 1.45; }
+  .bullets { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 12px; }
+  .bullets li { position: relative; padding-left: 26px; font-size: 15px; line-height: 1.4; color: #cdd3dd; }
+  .bullets li::before { content: ""; position: absolute; left: 2px; top: 6px; width: 9px; height: 9px;
+    border-radius: 3px; background: var(--accent); box-shadow: 0 0 0 4px rgba(79,140,255,.14); }
+  .slide.active .eyebrow { animation: rise .5s both; }
+  .slide.active .cap h2 { animation: rise .55s .06s both; }
+  .slide.active .cap .sub { animation: rise .55s .12s both; }
+  .slide.active .bullets li { animation: rise .5s both; }
+  .slide.active .bullets li:nth-child(1) { animation-delay: .20s; }
+  .slide.active .bullets li:nth-child(2) { animation-delay: .30s; }
+  .slide.active .bullets li:nth-child(3) { animation-delay: .40s; }
+  .slide.active .bullets li:nth-child(4) { animation-delay: .50s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* the screenshot frame */
+  .frame { position: absolute; left: 470px; top: 56px; width: 1080px; height: 675px;
+    border-radius: 14px; overflow: hidden; background: #0b0e13;
+    box-shadow: 0 20px 50px rgba(0,0,0,.5), 0 0 0 1px var(--line); }
+  .frame > .shot { width: 100%; height: 100%; object-fit: cover; display: block;
+    transform-origin: 50% 40%; }
+  .slide.active .frame > .shot { animation: kb 9s ease-out both; }
+  @keyframes kb { from { transform: scale(1.015); } to { transform: scale(1.075); } }
+  .slide.active .frame { animation: framepop .6s both; }
+  @keyframes framepop { from { opacity: 0; transform: translateY(14px) scale(.99); } to { opacity: 1; transform: none; } }
+
+  /* callouts */
+  .callout { position: absolute; border-radius: 10px; opacity: 0;
+    outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(79,140,255,.16);
+    z-index: 20; }
+  .callout.spot { box-shadow: 0 0 0 9999px rgba(6,8,12,.55), 0 0 0 4px rgba(79,140,255,.16); }
+  .slide.active .callout { animation: cpulse 9s ease-out both; }
+  .slide.active .callout:nth-of-type(2) { animation-delay: .45s; }
+  @keyframes cpulse {
+    0% { opacity: 0; transform: scale(1.05); }
+    8% { opacity: 1; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 4px rgba(79,140,255,.10); }
+  }
+  .cbadge { position: absolute; top: -11px; left: -11px; width: 24px; height: 24px; border-radius: 999px;
+    background: var(--accent); color: #fff; font-size: 12px; font-weight: 800;
+    display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+  .clabel { position: absolute; left: 0; top: -38px; white-space: nowrap;
+    background: var(--accent); color: #fff; font-size: 13px; font-weight: 600;
+    padding: 6px 10px; border-radius: 8px; box-shadow: 0 8px 22px rgba(0,0,0,.45); }
+  .clabel::after { content: ""; position: absolute; left: 16px; bottom: -6px; width: 12px; height: 12px;
+    background: var(--accent); transform: rotate(45deg); border-radius: 2px; }
+  .callout.label-below .clabel { top: auto; bottom: -38px; }
+  .callout.label-below .clabel::after { bottom: auto; top: -6px; }
+  .callout.label-right .clabel { left: auto; right: 0; }
+  .callout.label-right .clabel::after { left: auto; right: 16px; }
+
+  /* hero (title / end) */
+  .hero { position: absolute; inset: 0; display: grid; place-content: center; text-align: center;
+    padding: 0 140px; z-index: 30; }
+  .hero .eyebrow { font-size: 15px; }
+  .hero h1 { margin: 16px 0 0; font-size: 84px; letter-spacing: -.03em; line-height: 1.02;
+    background: linear-gradient(120deg, #fff 10%, #9fc0ff 55%, #c9a6ff 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero h2 { margin: 18px 0 0; font-size: 30px; font-weight: 500; color: #cdd3dd; }
+  .hero .hint { margin: 34px 0 0; font-size: 15px; color: var(--faint); }
+  .hero .kbd { font-family: var(--mono); background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 2px 8px; color: var(--muted); }
+  .chips { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+  .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 16px; font-size: 14px; color: #cdd3dd; }
+  .chip b { color: var(--accent); }
+  .slide.active .hero > * { animation: rise .6s both; }
+  .slide.active .hero h1 { animation-delay: .05s; }
+  .slide.active .hero h2 { animation-delay: .15s; }
+  .slide.active .chips { animation-delay: .25s; }
+  .slide.active .hero .hint { animation-delay: .35s; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .5; z-index: 1; }
+  .blob.a { width: 620px; height: 620px; left: 120px; top: -120px; background: #1d3a6e;
+    animation: float 14s ease-in-out infinite; }
+  .blob.b { width: 540px; height: 540px; right: 80px; bottom: -160px; background: #3a2456;
+    animation: float 17s ease-in-out infinite reverse; }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-40px); } }
+
+  /* controls */
+  .controls { position: absolute; right: 32px; bottom: 26px; z-index: 70;
+    display: flex; align-items: center; gap: 8px; }
+  .controls button { font: inherit; color: var(--text); background: rgba(30,34,43,.85);
+    border: 1px solid var(--line); border-radius: 9px; padding: 9px 13px; cursor: pointer;
+    backdrop-filter: blur(6px); transition: background .12s, border-color .12s; font-size: 14px; }
+  .controls button:hover { background: rgba(45,51,64,.95); border-color: #39404f; }
+  .controls .count { font-family: var(--mono); font-size: 13px; color: var(--muted);
+    padding: 0 6px; }
+  .dots { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 70; }
+  .dot { width: 9px; height: 9px; border-radius: 999px; border: none; padding: 0; cursor: pointer;
+    background: #333a47; transition: all .2s; }
+  .dot:hover { background: #4a5364; }
+  .dot.active { background: var(--accent); width: 26px; }
+  .brandmark { position: absolute; left: 48px; top: 44px; z-index: 40; display: flex; align-items: center; gap: 10px; }
+  .brandmark .dotmark { width: 12px; height: 12px; border-radius: 4px;
+    background: linear-gradient(135deg, var(--accent), var(--info)); }
+  .brandmark span { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide.active .frame > .shot, .slide.active .callout, .blob,
+    .slide.active .eyebrow, .slide.active .cap h2, .slide.active .cap .sub,
+    .slide.active .bullets li, .slide.active .hero > * { animation: none !important; }
+    .timer i { animation: none !important; width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <div id="viewport">
+    <div id="stage">
+      <div class="progress" id="progress"></div>
+      <div class="brandmark"><span class="dotmark"></span><span>EuroWIP · guided tour</span></div>
+      <div id="slides"></div>
+
+      <div class="timer"><i></i></div>
+      <div class="dots" id="dots"></div>
+      <div class="controls">
+        <button id="prev" title="Previous (←)">‹ Prev</button>
+        <button id="play" title="Play / pause (space)">❚❚ Pause</button>
+        <button id="next" title="Next (→)">Next ›</button>
+        <span class="count" id="count">1 / 13</span>
+        <button id="full" title="Fullscreen (f)">⛶</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Callout boxes captured live from the running app, as fractions of the
+  // 1440×900 viewport. Rendered inside the 1080×675 screenshot frame.
+  const CALL = {
+    "01-dashboard":       [{ t: "The KPIs", p: [0.0167, 0.1561, 0.9563, 0.1039] }],
+    "02-create-type":     [{ t: "Pick the service line", p: [0.3447, 0.2883, 0.1525, 0.1678] }],
+    "03-create-client":   [{ t: "Mock client directory — pick one", p: [0.0285, 0.3611, 0.9431, 0.2889] }],
+    "04-create-property": [{ t: "Country picker — UK by default", p: [0.0375, 0.3683, 0.1389, 0.2444] }],
+    "05-create-details":  [{ t: "Only the fields this type needs", p: [0.0285, 0.2883, 0.9431, 0.2167] }],
+    "06-create-terms":    [{ t: "Office ⇄ negotiator, linked", p: [0.0285, 0.4844, 0.4674, 0.0389] }],
+    "07-create-review":   [
+      { t: "All five steps complete", p: [0.0285, 0.2883, 0.9431, 0.1956] },
+      { t: "Accept instruction", p: [0.8878, 0.7944, 0.0956, 0.0389] }
+    ],
+    "08-create-accepted": [
+      { t: "Accepted — WIP line opened", p: [0.0167, 0.2072, 0.9563, 0.0478] },
+      { t: "kf_ record frozen at accept", p: [0.0285, 0.8550, 0.9326, 0.1450] }
+    ],
+    "09-wip":             [{ t: "Search, filter, select", p: [0.0285, 0.4239, 0.5394, 0.0656] }],
+    "10-controls":        [{ t: "Alerts, ageing, locks", p: [0.0285, 0.2111, 0.4890, 0.0633] }],
+    "11-model":           [{ t: "Instruction → one service-line record", p: [0.0167, 0.1561, 0.4740, 0.4180] }]
+  };
+
+  const SLIDES = [
+    { kind: "title", eyebrow: "EuroWIP · proof of concept", title: "A guided tour",
+      sub: "How to use the WIP pipeline app, end to end.",
+      hint: "Press <span class='kbd'>→</span> to start — or just watch." },
+    { img: "01-dashboard", eyebrow: "1 · Dashboard", title: "See the whole pipeline",
+      sub: "The landing screen.", callouts: "01-dashboard",
+      bullets: ["Gross in-hand, weighted retained, billed, paid and lost",
+                "Breakdowns by status, office and service line",
+                "Mixed-currency warning carried over from the wiki"] },
+    { img: "02-create-type", eyebrow: "2 · Create — type", title: "What are you instructing?",
+      sub: "Pick the service line.", callouts: "02-create-type",
+      bullets: ["13 instruction types, one card each",
+                "Each maps to its service-line entity (kf_*)",
+                "The choice drives every later step"] },
+    { img: "03-create-client", eyebrow: "3 · Create — client", title: "Who is instructing?",
+      sub: "Look up, then confirm.", callouts: "03-create-client",
+      bullets: ["15 mock clients across five countries",
+                "Pick a match to fill name, contact and entity",
+                "Or type the details by hand"] },
+    { img: "04-create-property", eyebrow: "4 · Create — property", title: "Which property?",
+      sub: "Search, verify, fill.", callouts: "04-create-property",
+      bullets: ["Loqate Find + Verify — the reference API",
+                "Country picker with flags, UK by default",
+                "Verified fields turn green"] },
+    { img: "05-create-details", eyebrow: "5 · Create — details", title: "Type-specific details",
+      sub: "Only the fields this type needs.", callouts: "05-create-details",
+      bullets: ["Valuation: purpose, basis, instruction and report dates",
+                "Weekly rent recalculates monthly and annual",
+                "No irrelevant fields to guess at"] },
+    { img: "06-create-terms", eyebrow: "6 · Create — terms", title: "Terms & assignment",
+      sub: "Fees, currency, who runs it.", callouts: "06-create-terms",
+      bullets: ["Owning office sets the default currency",
+                "An office narrows the negotiator list",
+                "Picking a negotiator sets their office"] },
+    { img: "07-create-review", eyebrow: "7 · Create — review", title: "Review, then accept",
+      sub: "Accept happens only here.", callouts: "07-create-review",
+      bullets: ["Readiness list turns green per step",
+                "Every card links back to its step",
+                "Accept is disabled until all five are complete"] },
+    { img: "08-create-accepted", eyebrow: "8 · Accepted", title: "It writes itself",
+      sub: "One click, records created.", callouts: "08-create-accepted",
+      bullets: ["Instruction row INS-000009",
+                "First WIP line WIP-000017, opened automatically",
+                "The kf_ record is frozen at acceptance"] },
+    { img: "09-wip", eyebrow: "9 · WIP", title: "The pipeline",
+      sub: "Every line, live.", callouts: "09-wip",
+      bullets: ["Search and filter by office, status, stale-only",
+                "Select a line for its detail panel",
+                "Billing, losing and period locks live here"] },
+    { img: "10-controls", eyebrow: "10 · Controls", title: "The guardrails",
+      sub: "What the model watches.", callouts: "10-controls",
+      bullets: ["Alerts for stale and unbilled lines",
+                "Receivables ageing buckets",
+                "Reporting-period locking and the event log"] },
+    { img: "11-model", eyebrow: "11 · Model & questions", title: "The model behind it",
+      sub: "Relational, one-to-one.", callouts: "11-model",
+      bullets: ["Instruction → exactly one service-line entity",
+                "Open questions carried from the wiki",
+                "Every instruction and service-line row"] },
+    { kind: "end", eyebrow: "That’s the loop", title: "Create → accept → WIP",
+      sub: "The instruction and its first WIP line appear together.",
+      chips: ["Create tab", "Accept", "Watch the WIP line"],
+      hint: "Run it again — the Create tab is always waiting." }
+  ];
+
+  const FRAME = { x: 470, y: 56, w: 1080, h: 675 };
+  const slidesEl = document.getElementById("slides");
+  const dotsEl = document.getElementById("dots");
+  const progressEl = document.getElementById("progress");
+  const countEl = document.getElementById("count");
+  const playBtn = document.getElementById("play");
+  const stage = document.getElementById("stage");
+
+  // ---- build slides
+  SLIDES.forEach((s, i) => {
+    const el = document.createElement("section");
+    el.className = "slide";
+    el.dataset.index = i;
+
+    if (s.kind) {
+      el.innerHTML =
+        `<div class="blob a"></div><div class="blob b"></div>` +
+        `<div class="hero">
+           <div class="eyebrow">${s.eyebrow}</div>
+           <h1>${s.title}</h1>
+           <h2>${s.sub}</h2>
+           ${s.chips ? `<div class="chips">${s.chips.map((c) => `<span class="chip"><b>›</b> ${c}</span>`).join("")}</div>` : ""}
+           ${s.hint ? `<div class="hint">${s.hint}</div>` : ""}
+         </div>`;
+    } else {
+      const c = (CALL[s.callouts] || []).map((co, k) => {
+        const [x, y, w, h] = co.p;
+        const px = Math.round(x * FRAME.w), py = Math.round(y * FRAME.h);
+        const pw = Math.round(w * FRAME.w), ph = Math.round(h * FRAME.h);
+        const cls = ["callout"];
+        if (y < 0.14) cls.push("label-below");
+        if (x + w > 0.86) cls.push("label-right");
+        if (CALL[s.callouts].length === 1) cls.push("spot");
+        return `<div class="${cls.join(" ")}" style="left:${px}px;top:${py}px;width:${pw}px;height:${ph}px">
+                  <span class="cbadge">${k + 1}</span>
+                  <span class="clabel">${co.t}</span>
+                </div>`;
+      }).join("");
+      el.innerHTML =
+        `<div class="cap">
+           <div class="eyebrow">${s.eyebrow}</div>
+           <h2>${s.title}</h2>
+           <p class="sub">${s.sub}</p>
+           <ul class="bullets">${s.bullets.map((b) => `<li>${b}</li>`).join("")}</ul>
+         </div>
+         <div class="frame">
+           <img class="shot" src="slides/${s.img}.png" alt="${s.title}" />
+           ${c}
+         </div>`;
+    }
+    slidesEl.appendChild(el);
+
+    const dot = document.createElement("button");
+    dot.className = "dot";
+    dot.title = s.kind ? s.title : `${s.eyebrow} — ${s.title}`;
+    dot.addEventListener("click", () => go(i));
+    dotsEl.appendChild(dot);
+  });
+
+  const slides = [...slidesEl.children];
+  const dots = [...dotsEl.children];
+  const DUR = 7200;
+  let index = 0, playing = true, timer = null;
+
+  function render() {
+    slides.forEach((el, i) => el.classList.toggle("active", i === index));
+    dots.forEach((d, i) => d.classList.toggle("active", i === index));
+    progressEl.style.width = ((index + 1) / slides.length) * 100 + "%";
+    countEl.textContent = `${index + 1} / ${slides.length}`;
+    // restart the timer + ken-burns animations for the new slide
+    stage.classList.remove("stage-run");
+    void stage.offsetWidth;
+    stage.classList.add("stage-run");
+  }
+  function go(i) {
+    index = (i + slides.length) % slides.length;
+    render();
+    schedule();
+  }
+  const next = () => go(index + 1);
+  const prev = () => go(index - 1);
+
+  function schedule() {
+    clearTimeout(timer);
+    if (!playing) return;
+    timer = setTimeout(next, DUR);
+  }
+  function setPlaying(p) {
+    playing = p;
+    stage.classList.toggle("paused", !p);
+    playBtn.textContent = p ? "❚❚ Pause" : "▶ Play";
+    schedule();
+  }
+
+  document.getElementById("next").addEventListener("click", () => { go(index + 1); });
+  document.getElementById("prev").addEventListener("click", () => { go(index - 1); });
+  playBtn.addEventListener("click", () => setPlaying(!playing));
+  document.getElementById("full").addEventListener("click", () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.();
+  });
+
+  addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") { next(); e.preventDefault(); }
+    else if (e.key === "ArrowLeft") { prev(); e.preventDefault(); }
+    else if (e.key === " ") { setPlaying(!playing); e.preventDefault(); }
+    else if (e.key === "Home") { go(0); }
+    else if (e.key === "End") { go(slides.length - 1); }
+    else if (e.key.toLowerCase() === "f") document.getElementById("full").click();
+  });
+
+  // pause autoplay while the pointer rests on the frame, so people can read
+  stage.addEventListener("mouseenter", () => { if (playing) { clearTimeout(timer); } });
+  stage.addEventListener("mouseleave", () => { if (playing) { schedule(); } });
+
+  // fit the fixed 1600×1000 stage to the window
+  function fit() {
+    const s = Math.min(innerWidth / 1600, innerHeight / 1000) * 0.96;
+    stage.style.transform = `scale(${s})`;
+  }
+  addEventListener("resize", fit);
+
+  // deep link: app-walkthrough.html#4 opens at slide 4 (0-based)
+  const hashN = parseInt((location.hash || "").slice(1), 10);
+  if (Number.isInteger(hashN)) index = Math.max(0, Math.min(SLIDES.length - 1, hashN));
+
+  fit();
+  render();
+  schedule();
+</script>
+</body>
+</html>

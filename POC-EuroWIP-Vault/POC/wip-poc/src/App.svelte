@@ -16,6 +16,7 @@
   let tab = $state('dashboard');
   let month = $state('');
   let selectedId = $state(null);
+  let showIntro = $state(false);
 
   let filters = $state({ search: '', officeId: '', status: '', staleOnly: false });
 
@@ -52,10 +53,20 @@
       await openDatabase();
       ready = true;
       bump();
+      showIntro = true; // offer the walkthrough on start
     } catch (err) {
       fatal = String(err?.message ?? err);
     }
   });
+
+  /** Open the animated walkthrough (a static page shipped in /tour). */
+  function openTour() {
+    window.open('./tour/index.html', '_blank', 'noopener');
+  }
+  function watchTour() {
+    openTour();
+    showIntro = false;
+  }
 
   function reseedAll() {
     repo.reseed();
@@ -87,6 +98,7 @@
       </p>
     </div>
     <div class="row">
+      <button class="tour-btn" onclick={openTour} title="Watch the animated walkthrough">▶ Tour</button>
       <select bind:value={month} style="width:auto">
         <option value="">All reporting months</option>
         {#each monthOptions as m (m)}
@@ -148,6 +160,24 @@
       <ModelPanel {instructions} {serviceLines} />
     {/if}
   </main>
+
+  {#if showIntro}
+    <div class="intro-overlay" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+      <div class="intro-card">
+        <div class="intro-icon">▶</div>
+        <h2 id="intro-title">New here?</h2>
+        <p>
+          Watch a short animated walkthrough of how this works — the dashboard,
+          creating an instruction, and the WIP line it opens automatically.
+        </p>
+        <div class="intro-actions">
+          <button class="primary" id="introWatch" onclick={watchTour}>Watch the slideshow</button>
+          <button class="ghost" id="introSkip" onclick={() => (showIntro = false)}>Skip to the app</button>
+        </div>
+        <p class="intro-note">You can reopen it any time from the <b>▶ Tour</b> button, top-right.</p>
+      </div>
+    </div>
+  {/if}
 {/if}
 
 <style>
@@ -181,5 +211,31 @@
   .work { display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; align-items: start; }
   .loading, .fatal { padding: 60px 24px; text-align: center; }
   .fatal { color: var(--bad); }
+
+  .tour-btn { border-color: #24405f; color: #79b0ff; }
+
+  .intro-overlay {
+    position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+    background: rgba(6, 8, 12, 0.62); backdrop-filter: blur(3px); padding: 20px;
+  }
+  .intro-card {
+    width: min(440px, 100%); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 24px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    animation: intropop 0.28s ease-out both;
+  }
+  @keyframes intropop {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  .intro-icon {
+    width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); font-size: 16px; margin-bottom: 12px;
+  }
+  .intro-card h2 { font-size: 18px; }
+  .intro-card p { margin: 8px 0 0; font-size: 13px; color: var(--muted); line-height: 1.55; }
+  .intro-actions { display: flex; gap: 8px; margin-top: 18px; }
+  .intro-note { margin-top: 14px; font-size: 11px; color: var(--faint); }
+  .intro-note b { color: var(--muted); }
+
   @media (max-width: 1100px) { .work { grid-template-columns: 1fr; } }
 </style>

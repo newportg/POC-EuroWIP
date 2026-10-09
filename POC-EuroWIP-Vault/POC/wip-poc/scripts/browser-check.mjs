@@ -133,6 +133,25 @@ try {
     if (state.state !== 'loading') break;
   }
 
+  // The app offers the walkthrough on start; check it, then dismiss it so it
+  // doesn't cover the UI.
+  const intro = await send('Runtime.evaluate', {
+    expression: `(() => {
+      const b = document.getElementById('introSkip');
+      const res = { offered: !!b, tourBtn: !!document.querySelector('.tour-btn'),
+                    watch: !!document.getElementById('introWatch') };
+      if (b) b.click();
+      return res;
+    })()`,
+    returnByValue: true
+  });
+  console.log(`\nstartup walkthrough prompt`);
+  console.log(`  offered on start: ${intro.result.value.offered ? 'yes' : 'NO'}`);
+  console.log(`  tour button:      ${intro.result.value.tourBtn ? 'present' : 'MISSING'}`);
+  if (!intro.result.value.offered) exceptions.push('startup walkthrough prompt did not appear');
+  if (!intro.result.value.tourBtn) exceptions.push('tour button missing from the header');
+  await sleep(300);
+
   console.log(`\nurl: ${URL_TO_TEST}`);
   console.log(`state: ${state?.state}`);
 
