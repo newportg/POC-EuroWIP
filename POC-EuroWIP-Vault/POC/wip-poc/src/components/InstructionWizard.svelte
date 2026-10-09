@@ -5,7 +5,8 @@
   } from '../lib/repo.js';
   import {
     TYPES, STEPS, REQUIRED_LABELS, mapServiceLine,
-    CLIENT_FIELDS, findMockClients, MOCK_OFFICES, getOfficeByName
+    CLIENT_FIELDS, findMockClients, MOCK_OFFICES, getOfficeByName,
+    ALL_NEGOTIATORS, officeForNegotiator
   } from '../lib/wizardConfig.js';
   import {
     COUNTRY_ISO, loadLoqateKey, saveLoqateKey,
@@ -247,13 +248,27 @@
 
   /* ------------------------------------------------------ terms */
   let currencyTouched = $state(false);
-  const negotiators = $derived(getOfficeByName(terms.owningOffice)?.negotiators ?? []);
+  // Office and negotiator are two ends of one link: an office narrows the
+  // negotiator list to its staff, and picking a negotiator sets their office.
+  // With no office chosen yet, offer the whole directory so either end works.
+  const negotiators = $derived(
+    getOfficeByName(terms.owningOffice)?.negotiators ?? ALL_NEGOTIATORS
+  );
 
   function onOfficeChange(name) {
     terms.owningOffice = name;
     terms.assignedTo = ''; // negotiators belong to the office
     const office = getOfficeByName(name);
     if (office && !currencyTouched) terms.currency = office.currency;
+  }
+
+  function onNegotiatorChange(name) {
+    terms.assignedTo = name;
+    const office = officeForNegotiator(name);
+    if (office) {
+      terms.owningOffice = office.name;
+      if (!currencyTouched) terms.currency = office.currency;
+    }
   }
 
   /* ------------------------------------------------------ details */
@@ -712,11 +727,18 @@
         <div class="field">
           <label for="assignedTo">Assigned to <span class="req">*</span></label>
           <select id="assignedTo" data-key="assignedTo" bind:value={terms.assignedTo}
-                  disabled={!terms.owningOffice}>
-            <option value="">{terms.owningOffice ? 'Select negotiator…' : 'Select owning office first…'}</option>
+                  onchange={(e) => onNegotiatorChange(e.currentTarget.value)}>
+            <option value="">
+              {terms.owningOffice ? `Select a ${terms.owningOffice} negotiator…` : 'Select a negotiator…'}
+            </option>
             {#each negotiators as n (n)}<option>{n}</option>{/each}
           </select>
           <div class="err">Assigned handler is required</div>
+          <p class="hint">
+            {terms.owningOffice
+              ? `Showing ${terms.owningOffice} staff.`
+              : 'All negotiators — choosing one sets their office.'}
+          </p>
         </div>
         <div class="field">
           <label for="owningOffice">Owning office <span class="req">*</span></label>

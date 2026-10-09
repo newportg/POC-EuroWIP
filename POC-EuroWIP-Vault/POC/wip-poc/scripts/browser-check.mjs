@@ -328,13 +328,32 @@ try {
         await sleep(150);
         const officeSel = document.querySelector('#owningOffice');
         if (!officeSel || officeSel.options.length < 2) return { error: 'office options missing' };
+        const negValues = () => [...document.querySelector('#assignedTo').options]
+          .map(o => o.value).filter(Boolean);
+
+        // Office -> negotiators: choosing an office narrows the list to its staff.
         setNative(officeSel, 'Paris');
         await sleep(200);
+        const paris = negValues();
+        if (!paris.includes('Claire Fournier') || paris.includes('Pablo García')) {
+          return { error: 'negotiators not filtered by the chosen office', paris };
+        }
+
+        // Negotiator -> office: picking a negotiator sets their office.
+        setNative(officeSel, '');
+        await sleep(150);
+        if (!negValues().includes('Pablo García')) {
+          return { error: 'negotiator list is not the full directory when no office is set' };
+        }
+        setNative(document.querySelector('#assignedTo'), 'Pablo García');
+        await sleep(150);
+        if (document.querySelector('#owningOffice').value !== 'Barcelona') {
+          return { error: 'picking a negotiator did not set their office',
+                   office: document.querySelector('#owningOffice').value };
+        }
+
         setNative(key('feeBasis'), 'Fixed fee');
         setNative(key('expectedRevenue'), '275000');
-        const negSel = document.querySelector('#assignedTo');
-        if (!negSel || negSel.options.length < 2) return { error: 'negotiator options missing after office choice' };
-        setNative(negSel, negSel.options[1].value);
         await sleep(200);
 
         // Step 6 — Review: the readiness list must be fully green, then accept.

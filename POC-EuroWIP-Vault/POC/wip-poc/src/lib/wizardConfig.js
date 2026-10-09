@@ -297,3 +297,11 @@ export function getOfficeByName(name) {
   if (!name) return null;
   return MOCK_OFFICES.find((o) => o.name === name) || null;
 }
+
+/* Every negotiator across the directory, for the un-filtered end of the link. */
+export const ALL_NEGOTIATORS = MOCK_OFFICES.flatMap((o) => o.negotiators);
+
+/* The office a negotiator belongs to — the reverse of the office → staff link. */
+export function officeForNegotiator(name) {
+  return MOCK_OFFICES.find((o) => o.negotiators.includes(name)) || null;
+}
