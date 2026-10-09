@@ -152,6 +152,32 @@ try {
   if (!intro.result.value.tourBtn) exceptions.push('tour button missing from the header');
   await sleep(300);
 
+  // The Tour button should open the walkthrough in-page (no new tab / URL bar).
+  await send('Runtime.evaluate', { expression: `document.querySelector('.tour-btn')?.click()` });
+  await sleep(1600); // let the deck load inside the iframe
+  const tour = await send('Runtime.evaluate', {
+    expression: `(() => {
+      const f = document.querySelector('iframe.tour-frame');
+      let slides = 0, active = -1;
+      try {
+        const d = f && f.contentDocument;
+        if (d) {
+          slides = d.querySelectorAll('.slide').length;
+          active = [...d.querySelectorAll('.slide')].findIndex((s) => s.classList.contains('active'));
+        }
+      } catch { /* cross-origin guard */ }
+      const src = f ? (f.getAttribute('src') || '') : null;
+      document.getElementById('tourClose')?.click();
+      return { open: !!f, src, slides, active };
+    })()`,
+    returnByValue: true
+  });
+  const tv = tour.result.value;
+  console.log(`  tour overlay:     ${tv.open ? `opens in-page (${tv.src}) — ${tv.slides} slides, active ${tv.active}` : 'did NOT open'}`);
+  if (!tv.open) exceptions.push('tour overlay did not open from the header button');
+  if (tv.open && tv.slides !== 13) exceptions.push(`deck inside the app has ${tv.slides} slides, expected 13`);
+  await sleep(300);
+
   console.log(`\nurl: ${URL_TO_TEST}`);
   console.log(`state: ${state?.state}`);
 

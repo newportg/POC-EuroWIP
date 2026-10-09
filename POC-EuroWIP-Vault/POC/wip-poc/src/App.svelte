@@ -17,6 +17,7 @@
   let month = $state('');
   let selectedId = $state(null);
   let showIntro = $state(false);
+  let tourOpen = $state(false);
 
   let filters = $state({ search: '', officeId: '', status: '', staleOnly: false });
 
@@ -59,13 +60,13 @@
     }
   });
 
-  /** Open the animated walkthrough (a static page shipped in /tour). */
+  /** Show the animated walkthrough in-page (a static page shipped in /tour). */
   function openTour() {
-    window.open('./tour/index.html', '_blank', 'noopener');
-  }
-  function watchTour() {
-    openTour();
     showIntro = false;
+    tourOpen = true;
+  }
+  function onKey(e) {
+    if (e.key === 'Escape' && tourOpen) tourOpen = false;
   }
 
   function reseedAll() {
@@ -81,6 +82,8 @@
     selectedId = null;
   }
 </script>
+
+<svelte:window onkeydown={onKey} />
 
 {#if fatal}
   <div class="fatal">
@@ -171,11 +174,27 @@
           creating an instruction, and the WIP line it opens automatically.
         </p>
         <div class="intro-actions">
-          <button class="primary" id="introWatch" onclick={watchTour}>Watch the slideshow</button>
+          <button class="primary" id="introWatch" onclick={openTour}>Watch the slideshow</button>
           <button class="ghost" id="introSkip" onclick={() => (showIntro = false)}>Skip to the app</button>
         </div>
         <p class="intro-note">You can reopen it any time from the <b>▶ Tour</b> button, top-right.</p>
       </div>
+    </div>
+  {/if}
+
+  {#if tourOpen}
+    <div class="tour-overlay">
+      <div class="tour-bar">
+        <div class="tour-title"><span class="dotmark"></span> EuroWIP · guided tour</div>
+        <button class="ghost" id="tourClose" onclick={() => (tourOpen = false)}>✕ Back to the app</button>
+      </div>
+      <iframe
+        class="tour-frame"
+        src="./tour/index.html"
+        title="EuroWIP walkthrough"
+        allow="fullscreen"
+        allowfullscreen
+      ></iframe>
     </div>
   {/if}
 {/if}
@@ -236,6 +255,24 @@
   .intro-actions { display: flex; gap: 8px; margin-top: 18px; }
   .intro-note { margin-top: 14px; font-size: 11px; color: var(--faint); }
   .intro-note b { color: var(--muted); }
+
+  .tour-overlay {
+    position: fixed; inset: 0; z-index: 120; background: var(--bg);
+    display: flex; flex-direction: column;
+  }
+  .tour-bar {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .tour-title {
+    display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted);
+  }
+  .tour-title .dotmark {
+    width: 12px; height: 12px; border-radius: 4px;
+    background: linear-gradient(135deg, var(--accent), var(--info));
+  }
+  .tour-frame { flex: 1 1 auto; width: 100%; border: 0; background: var(--bg); }
 
   @media (max-width: 1100px) { .work { grid-template-columns: 1fr; } }
 </style>
