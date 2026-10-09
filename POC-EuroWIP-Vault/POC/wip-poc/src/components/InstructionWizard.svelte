@@ -1,6 +1,6 @@
 <script>
   import {
-    createInstruction,
+    createInstruction, createWip,
     resolveClientAccounts, resolveContact, resolveOfficeId, resolveProperty
   } from '../lib/repo.js';
   import {
@@ -22,6 +22,8 @@
 
   let step = $state('type');
   let ref = $state(null);
+  let wipRef = $state(null);
+  let wipError = $state('');
   let accepted = $state(false);
   let payload = $state(null);
   let acceptError = $state('');
@@ -351,8 +353,29 @@
       comments: terms.notes || null
     });
     if (!res.ok) { acceptError = res.error; return; }
-
     ref = res.name;
+
+    // Completing the review opens the instruction's first WIP line, so the
+    // pipeline is populated the moment a matter is instructed. The financials
+    // come from the Terms step: gross = net = expected revenue, with the office
+    // retaining 20% (the split the seed fixtures use).
+    const revenue = Number(terms.expectedRevenue) || 0;
+    const wipRes = createWip({
+      instruction_id: res.id,
+      net_fee_to_group: revenue,
+      office_retained: Math.round(revenue * 0.2 * 100) / 100,
+      probability: 100,
+      gross_fee: revenue,
+      reporting_month: `${today.slice(0, 7)}-01`,
+      completion_month: details.kf_targetcompletiondate
+        ? `${details.kf_targetcompletiondate.slice(0, 7)}-01`
+        : null,
+      transaction_currency: terms.currency || 'EUR',
+      comments: terms.notes || null
+    });
+    if (wipRes.ok) wipRef = wipRes.name;
+    else wipError = wipRes.error;
+
     payload = buildRecord(); // frozen snapshot at acceptance
     accepted = true;
     oncreated();
@@ -378,9 +401,12 @@
 
   {#if accepted}
     <div class="success-banner show">
-      <strong>{ref} accepted.</strong>
-      <span class="faint"> Accepted at Review · written to the WIP database as {type?.entity}.</span>
+      <strong>{ref} accepted{wipRef ? ` · ${wipRef} opened` : ''}.</strong>
+      <span class="faint"> Accepted at Review · written as {type?.entity}{wipRef ? `, with WIP line ${wipRef}` : ''}.</span>
     </div>
+  {/if}
+  {#if wipError}
+    <div class="accept-error show"><strong>WIP line not created.</strong> {wipError}</div>
   {/if}
 
   <!-- --------------------------------------------------------- type -->

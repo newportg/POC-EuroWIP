@@ -342,66 +342,41 @@ try {
           return { error: 'accept still disabled', missing: missingRequired };
         }
         acceptBtn.click();
-        await sleep(600);
+        await sleep(700);
         if (!/INS-\\d{6} accepted/.test(text())) {
           return { error: 'instruction was not accepted', snippet: text().slice(0, 400) };
         }
         const ref = (text().match(/(INS-\\d{6}) accepted/) || [])[1];
 
-        // --- the WIP line, under the instruction we just accepted
-        const wipModeBtn = [...document.querySelectorAll('button')]
-          .find(b => b.textContent.trim() === 'Create a WIP line');
-        if (!wipModeBtn) return { error: 'WIP-line mode button missing', ref };
-        wipModeBtn.click();
-        await sleep(250);
-        const wipForm = document.querySelector('#wip-line-form');
-        if (!wipForm) return { error: 'WIP-line form missing', ref };
-        const parentSelect = wipForm.querySelector('#w-instr');
-        const newOption = [...parentSelect.options].find(o => o.textContent.includes(ref));
-        if (!newOption) return { error: 'new instruction not offered as a WIP parent', ref };
-        setNative(parentSelect, newOption.value);
-        setNative(wipForm.querySelector('#w-net'), '75000');
-        setNative(wipForm.querySelector('#w-retained'), '15000');
-        setNative(wipForm.querySelector('#w-prob'), '40');
-        setNative(wipForm.querySelector('#w-gross'), '75000');
-        await sleep(200);
-        wipForm.requestSubmit();
-        await sleep(700);
+        // Accepting must open the WIP line as well — the banner names it.
+        const wipRef = (text().match(/(WIP-\\d{6}) opened/) || [])[1] ?? null;
+        if (!wipRef) {
+          return { error: 'accept did not open a WIP line', ref, snippet: text().slice(0, 500) };
+        }
 
-        // On success the panel routes to the WIP tab, filtered to the new line.
-        // The confirmation is therefore already gone by the time we look, so
-        // assert on what the user is left looking at instead.
+        // ...and that line must be visible on the WIP tab.
+        tab('wip');
+        await sleep(500);
         const onWipTab = [...document.querySelectorAll('nav .tab')]
           .some(b => b.textContent.trim() === 'WIP' && b.classList.contains('active'));
         const bodyRows = [...document.querySelectorAll('tbody tr')];
-        const wipRef = bodyRows
-          .map(tr => tr.textContent.match(/WIP-\\d{6}/)?.[0])
-          .find(Boolean) ?? null;
-        const searchBox = document.querySelector('input.search')?.value ?? null;
-
-        if (!onWipTab) {
-          return { error: 'WIP line was not created', snippet: text().slice(0, 300) };
-        }
-        const rowVisible = wipRef !== null;
-        return { ref, wipRef, onWipTab, rowVisible, listed: bodyRows.length, search: searchBox };
+        const rowVisible = bodyRows.some(tr => tr.textContent.includes(wipRef));
+        return { ref, wipRef, onWipTab, rowVisible, listed: bodyRows.length };
       })()`
     });
 
     const flow = createFlow.result.value;
     if (flow.error) {
       console.log(`\ncreation flow: FAILED — ${flow.error}`);
-      if (flow.rows !== undefined) console.log(`  tbody rows present:  ${flow.rows}`);
-      if (flow.search !== undefined) console.log(`  search box holds:    ${JSON.stringify(flow.search)}`);
-      if (flow.rowText !== undefined) console.log(`  first row text:     ${JSON.stringify(flow.rowText)}`);
       if (flow.snippet) console.log('  page said: ' + flow.snippet.replace(/\n+/g, ' | '));
       exceptions.push(`creation flow: ${flow.error}`);
     } else {
       console.log(`\ncreation flow`);
       console.log(`  instruction created: ${flow.ref}`);
-      console.log(`  WIP line created:    ${flow.wipRef}`);
+      console.log(`  WIP line opened:     ${flow.wipRef}`);
       console.log(`  routed to WIP tab:    ${flow.onWipTab ? 'yes' : 'NO'}`);
       console.log(`  new row visible:     ${flow.rowVisible ? 'yes' : 'NO'}`);
-      console.log(`  rows after filter:   ${flow.listed}`);
+      console.log(`  rows in list:        ${flow.listed}`);
     }
   }
 
