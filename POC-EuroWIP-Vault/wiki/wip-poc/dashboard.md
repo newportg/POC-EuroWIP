@@ -6,11 +6,11 @@ source: POC/wip-poc/src (App.svelte, repo.js, schema.js, KpiBar.svelte, TotalsTa
 extracted: 2026-10-09
 ---
 
-# WIP POC — Dashboard
+# WIP POC Dashboard
 
 The `Dashboard` tab is the landing screen of the WIP proof-of-concept app
 (`POC/wip-poc`). It is the read-only summary of the whole pipeline: seven KPIs
-across the top, then three breakdown tables. Nothing here writes data — the
+across the top, then three breakdown tables. **Nothing here writes data**, the
 billing, losing and period-locking actions live on the `WIP` and `Controls` tabs.
 
 This page documents the app's Dashboard. It is **not** [[Dashboard]], the vault's
@@ -43,14 +43,14 @@ state; weighted retained is the discounted pipeline.
 | Locked lines | Count of lines in a locked period | `sum(period_locked)` |
 
 A **mixed-currency warning** appears under the bar when the loaded rows contain more
-than one distinct `transaction_currency`. It is a text note only — the sums are not
+than one distinct `transaction_currency`. **It is a text note only**, the sums are not
 converted, which is the same reporting gap flagged in [[wip-reporting-and-kpis]]
 (the "currency warning" in [[wip-table-specification]]). The warning is computed in
 `App.svelte`, not in SQL.
 
 ### 2. Totals by status
 
-One row per lifecycle state, **always all four** — a state with no lines renders as a
+**One row per lifecycle state, always all four**, a state with no lines renders as a
 zero row rather than disappearing (back-filled in `repo.getTotalsByStatus`). Columns:
 Status, Lines, Gross, Share, Weighted.
 
@@ -63,9 +63,9 @@ Two group tables from one shape (`GROUP_TOTALS_SQL` in `repo.js`). Each row is o
 owning office or one service line, with every lifecycle state side by side. Columns:
 Lines, In hand, Billed, Paid, Lost, Weighted.
 
-- **Office** groups on `office_name` (the `business_unit` name), falling back to
+- **Office**, groups on `office_name` (the `business_unit` name), falling back to
   `'Unknown office'`.
-- **Service line** groups on the denormalised `wip.service_line`, falling back to
+- **Service line**, groups on the denormalised `wip.service_line`, falling back to
   `'Unknown service line'`.
 - Ordered by total gross, descending. Footers are summed in the component.
 
@@ -75,7 +75,7 @@ extended so each group also shows what it has billed and lost, not open WIP only
 
 ### Not on the Dashboard
 
-- **Alerts, receivables ageing buckets and the event log** are on the `Controls`
+- **Alerts, receivables ageing buckets and the event log**, these are on the `Controls`
   tab, not here.
 - The **WIP table** (searchable, selectable, one line per row) is the `WIP` tab.
 
@@ -88,7 +88,7 @@ attributes pulled in.
 
 ```plantuml
 @startuml
-title WIP POC — tables behind the dashboard
+title WIP POC: tables behind the dashboard
 
 entity "business_unit" as bu {
   * id
@@ -167,7 +167,7 @@ wip  --> vwip            : flattened by
 note right of wip
   Money is stored as plain REAL.
   transaction_currency is a
-  label only — no conversion.
+  label, not a conversion.
   weighted_office_retained and
   stale_date are generated
   (STORED) columns.
@@ -202,8 +202,8 @@ Two notes on the model:
 
 - **`service_line` on the dashboard comes from `wip`, not from the join to
   `service_line_parent`.** It is copied down from the parent Instruction by trigger
-  **PL-2** on insert, which is exactly why the wiki insists PL-2 must be correct —
-  if it is wrong, every service-line total here diverges from the CRM of record.
+  **PL-2** on insert, which is exactly why the wiki insists PL-2 must be correct.
+  If it is wrong, every service-line total here diverges from the CRM of record.
   See [[wip-automation-requirements]] and [[wip-application-composition]].
 - **No currency conversion.** `gross_fee`, `office_retained` and the weighted
   aggregate simply sum the stored values. EUR and GBP lines are added together; the
@@ -215,7 +215,7 @@ Four reads produce the whole screen. All four are defined in `src/lib/repo.js`, 
 all four use the same month-scoping idiom: a null binds "all months", because
 `? IS NULL OR reporting_month = ?` is passed the same `month` value twice.
 
-### KPI bar — `getKpis(month)`
+### KPI bar: `getKpis(month)`
 
 ```sql
 SELECT
@@ -234,7 +234,7 @@ WHERE ? IS NULL OR reporting_month = ?
 Returns a single row. `SUM(CASE ...)` per status is the pattern used throughout: one
 pass over the view yields every state at once.
 
-### Totals by status — `getTotalsByStatus(month)`
+### Totals by status: `getTotalsByStatus(month)`
 
 ```sql
 SELECT wip_status AS status,
@@ -251,7 +251,7 @@ SELECT wip_status AS status,
 fixed list `['WIP', 'Billed', 'Paid', 'Lost']` and substitutes a zero row for any
 missing state, so the table shape is stable.
 
-### Totals by office / service line — `getTotalsByOffice` and `getTotalsByServiceLine`
+### Totals by office / service line: `getTotalsByOffice` and `getTotalsByServiceLine`
 
 Both call a factory, `GROUP_TOTALS_SQL(dimensionExpr)`, which supplies the one
 substitution point:
@@ -293,7 +293,7 @@ is silently dropped from the totals.
 | Totals by status | `TotalsTables.svelte` | `getTotalsByStatus` | above |
 | Totals by office | `TotalsTables.svelte` | `getTotalsByOffice` | `GROUP_TOTALS_SQL` |
 | Totals by service line | `TotalsTables.svelte` | `getTotalsByServiceLine` | `GROUP_TOTALS_SQL` |
-| Month selector, tab state | `App.svelte` | — | — |
+| Month selector, tab state | `App.svelte` | n/a | n/a |
 
 All derived reads in `App.svelte` key off a `version` counter; every mutation bumps
 it, which re-runs these queries against the live in-memory database. The dashboard is
@@ -301,8 +301,8 @@ therefore never stale relative to a create, bill, lose or lock made on another t
 
 ## Related
 
-- [[wip-reporting-and-kpis]] — the reporting requirement the dashboard models
-- [[wip-table-specification]] — the `kf_WIP` columns behind the view
-- [[wip-automation-requirements]] — PL-2 (the denormalisation the totals depend on), PL-4
-- [[wip-application-composition]] — the ArchiMate data model
-- [[wip-open-questions]] — Q7 (mixed-currency / receivables inference), Q1
+- **[[wip-reporting-and-kpis]]**, the reporting requirement the dashboard models
+- **[[wip-table-specification]]**, the `kf_WIP` columns behind the view
+- **[[wip-automation-requirements]]**, PL-2 (the denormalisation the totals depend on), PL-4
+- **[[wip-application-composition]]**, the ArchiMate data model
+- **[[wip-open-questions]]**, Q7 (mixed-currency / receivables inference), Q1
