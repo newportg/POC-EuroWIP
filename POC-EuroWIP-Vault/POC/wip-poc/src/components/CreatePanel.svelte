@@ -1,87 +1,20 @@
 <script>
-  import {
-    createInstruction, createWip,
-    getBrands, getLegalEntities, getOffices, getProperties, getContacts,
-    getServiceLines, getInstructions, getFeeSchedules
-  } from '../lib/repo.js';
+  import { createWip, getInstructions, getFeeSchedules } from '../lib/repo.js';
+  import InstructionWizard from './InstructionWizard.svelte';
 
   let { oncreated = () => {}, onview = () => {}, version = 0 } = $props();
 
-  const offices = getOffices();
-  const serviceLines = getServiceLines();
-  const brands = getBrands();
-  const legalEntities = getLegalEntities();
-  const properties = getProperties();
-  const contacts = getContacts();
-  const feeSchedules = getFeeSchedules();
+  // The Create tab carries two intents that are really one chain: a relationship
+  // record (Instruction) and, under it, the revenue lines (WIP). They are split
+  // into modes so the wizard can own the whole width.
+  let mode = $state('instruction');
 
-  // ------------------------------------------------------------- step 1
-  let iError = $state('');
-  let iOk = $state('');
-  let instruction = $state({
-    instruction_type: 'Mandate',
-    service_line: '',
-    client_account_id: '',
-    legal_entity_account_id: '',
-    primary_contact_id: '',
-    property_id: '',
-    owning_office_id: '',
-    instruction_status: 'Active',
-    start_date: new Date().toISOString().slice(0, 10),
-    signed_date: '',
-    expected_revenue: '',
-    sector: '',
-    negotiator: '',
-    comments: ''
-  });
-
-  // The service line drives which legal entity is plausible, so preselect the
-  // first one rather than leaving an unfiltered choice.
-  $effect(() => {
-    if (!instruction.service_line) return;
-    const first = legalEntities[0];
-    if (first && !legalEntities.some((e) => String(e.id) === String(instruction.legal_entity_account_id))) {
-      instruction.legal_entity_account_id = String(first.id);
-    }
-  });
-
-  function submitInstruction(ev) {
-    ev.preventDefault();
-    iError = '';
-    iOk = '';
-    const res = createInstruction({
-      ...instruction,
-      primary_contact_id: instruction.primary_contact_id || null,
-      property_id: instruction.property_id || null,
-      signed_date: instruction.signed_date || null,
-      sector: instruction.sector || null,
-      negotiator: instruction.negotiator || null,
-      comments: instruction.comments || null
-    });
-    if (!res.ok) {
-      iError = res.error;
-      return;
-    }
-    iOk = `Created ${res.name}.`;
-    instruction = {
-      ...instruction,
-      expected_revenue: '',
-      sector: '',
-      negotiator: '',
-      comments: ''
-    };
-    wip.instruction_id = String(res.id);
-    oncreated();
-  }
-
-  // ------------------------------------------------------------- step 2
-  // The repo reads a module-level database, which is not a reactive dependency.
-  // Without naming `version` here, this would compute once and cache forever,
-  // and a just-created instruction would never appear as a WIP parent.
   const instructions = $derived.by(() => {
     void version;
     return getInstructions().filter((i) => i.instruction_status !== 'Withdrawn');
   });
+  const feeSchedules = getFeeSchedules();
+
   const selectedInstruction = $derived(
     instructions.find((i) => String(i.id) === String(wip.instruction_id)) ?? null
   );
@@ -141,139 +74,38 @@
   const money = (v) => (v === '' ? '0' : v);
 </script>
 
-<div class="cols">
-  <!-- -------------------------------------------------- 1. Instruction -->
-  <form class="card" onsubmit={submitInstruction}>
-    <div class="step">1</div>
-    <h2>Create an Instruction</h2>
-    <p class="faint hint">
-      The relationship record. It owns the service line, the client and the
-      legal entity, and it is the only route to a WIP line.
-    </p>
+<div class="spread" style="margin-bottom:12px">
+  <div class="seg">
+    <button class:active={mode === 'instruction'} onclick={() => (mode = 'instruction')}>
+      Create an Instruction
+    </button>
+    <button class:active={mode === 'wip'} onclick={() => (mode = 'wip')}>
+      Create a WIP line
+    </button>
+  </div>
+  <p class="faint" style="margin:0;font-size:12px">
+    {mode === 'instruction'
+      ? 'The relationship record: service line, client and the party that gets invoiced.'
+      : 'Revenue and billing lines under an existing instruction.'}
+  </p>
+</div>
 
-    {#if iError}<p class="error">{iError}</p>{/if}
-    {#if iOk}<p class="ok">{iOk}</p>{/if}
-
-    <div class="fields">
-      <div>
-        <label for="i-type">Type</label>
-        <select id="i-type" bind:value={instruction.instruction_type}>
-          <option>Mandate</option>
-          <option>Engagement</option>
-          <option>Instruction</option>
-        </select>
-      </div>
-      <div>
-        <label for="i-sl">Service line</label>
-        <select id="i-sl" bind:value={instruction.service_line} required>
-          <option value="" disabled>Choose…</option>
-          {#each serviceLines as s (s.id)}
-            <option value={s.service_line}>{s.service_line}</option>
-          {/each}
-        </select>
-      </div>
-      <div>
-        <label for="i-brand">Client brand (relationship owner)</label>
-        <select id="i-brand" bind:value={instruction.client_account_id} required>
-          <option value="" disabled>Choose…</option>
-          {#each brands as a (a.id)}
-            <option value={a.id}>{a.name}</option>
-          {/each}
-        </select>
-      </div>
-      <div>
-        <label for="i-le">Legal entity (invoice party)</label>
-        <select id="i-le" bind:value={instruction.legal_entity_account_id} required>
-          <option value="" disabled>Choose…</option>
-          {#each legalEntities as a (a.id)}
-            <option value={a.id}>{a.name}</option>
-          {/each}
-        </select>
-      </div>
-      <div>
-        <label for="i-office">Owning office</label>
-        <select id="i-office" bind:value={instruction.owning_office_id} required>
-          <option value="" disabled>Choose…</option>
-          {#each offices as o (o.id)}
-            <option value={o.id}>{o.name} · {o.city}</option>
-          {/each}
-        </select>
-      </div>
-      <div>
-        <label for="i-status">Status</label>
-        <select id="i-status" bind:value={instruction.instruction_status}>
-          <option>Active</option>
-          <option>On Hold</option>
-          <option>Completed</option>
-        </select>
-      </div>
-      <div>
-        <label for="i-start">Start date</label>
-        <input id="i-start" type="date" bind:value={instruction.start_date} required />
-      </div>
-      <div>
-        <label for="i-signed">Signed date</label>
-        <input id="i-signed" type="date" bind:value={instruction.signed_date} />
-      </div>
-      <div>
-        <label for="i-contact">Primary contact</label>
-        <select id="i-contact" bind:value={instruction.primary_contact_id}>
-          <option value="">None</option>
-          {#each contacts as c (c.id)}
-            <option value={c.id}>{c.name}</option>
-          {/each}
-        </select>
-      </div>
-      <div>
-        <label for="i-prop">Property</label>
-        <select id="i-prop" bind:value={instruction.property_id}>
-          <option value="">None</option>
-          {#each properties as p (p.id)}
-            <option value={p.id}>{p.name}</option>
-          {/each}
-        </select>
-      </div>
-      <div>
-        <label for="i-sector">Sector</label>
-        <input id="i-sector" bind:value={instruction.sector} placeholder="Office" />
-      </div>
-      <div>
-        <label for="i-neg">Negotiator</label>
-        <input id="i-neg" bind:value={instruction.negotiator} placeholder="Camille Roux" />
-      </div>
-      <div class="wide">
-        <label for="i-rev">Expected revenue</label>
-        <input id="i-rev" type="number" min="0" step="1000" bind:value={instruction.expected_revenue}
-               placeholder="250000" />
-      </div>
-      <div class="wide">
-        <label for="i-comments">Comments</label>
-        <input id="i-comments" bind:value={instruction.comments} placeholder="Standard fee arrangement." />
-      </div>
-    </div>
-
-    <button class="primary" type="submit" style="margin-top:12px">Create instruction</button>
-    <p class="faint hint" style="margin:8px 0 0">
-      PL-1 requires exactly one service-line parent, and it must match the
-      service line. The reference is generated as <span class="mono">INS-{'{'}000000{'}'}</span>.
-    </p>
-  </form>
-
-  <!-- ----------------------------------------------------- 2. WIP line -->
-  <form class="card" onsubmit={submitWip}>
-    <div class="step">2</div>
+{#if mode === 'instruction'}
+  <InstructionWizard {oncreated} {onview} {version} />
+{:else}
+  <form id="wip-line-form" class="card" onsubmit={submitWip}>
     <h2>Create a WIP line</h2>
-    <p class="faint hint">
+    <p class="faint" style="margin:6px 0 12px">
       A revenue or billing line under an Instruction. Leave the classification
       fields alone — PL-2 copies them down from the parent.
     </p>
 
-    {#if wError}<p class="error">{wError}</p>{/if}
-    {#if wOk}<p class="ok">{wOk}</p>{/if}
+    {#if wError}<div class="accept-error show"><strong>Rejected.</strong> {wError}</div>{/if}
+    {#if wOk}<div class="success-banner show"><strong>{wOk}</strong></div>{/if}
 
-    <div class="fields">
-      <div class="wide">
-        <label for="w-instr">Parent Instruction (PL-1)</label>
+    <div class="form-grid">
+      <div class="field span-2">
+        <label for="w-instr">Parent Instruction (PL-1) <span class="req">*</span></label>
         <select id="w-instr" bind:value={wip.instruction_id} required>
           <option value="" disabled>Choose…</option>
           {#each instructions as i (i.id)}
@@ -283,7 +115,7 @@
       </div>
 
       {#if selectedInstruction}
-        <div class="wide parent-strip">
+        <div class="span-2 row" style="flex-wrap:wrap">
           <span class="tag">{selectedInstruction.service_line}</span>
           <span class="tag">{selectedInstruction.client_name}</span>
           <span class="tag">{selectedInstruction.office_name}</span>
@@ -291,34 +123,34 @@
         </div>
       {/if}
 
-      <div>
+      <div class="field">
         <label for="w-net">Net fee to group</label>
         <input id="w-net" type="number" min="0" step="1000" bind:value={wip.net_fee_to_group}
                placeholder="120000" />
       </div>
-      <div>
+      <div class="field">
         <label for="w-retained">Office retained</label>
         <input id="w-retained" type="number" min="0" step="1000" bind:value={wip.office_retained}
                placeholder="24000" />
       </div>
-      <div>
+      <div class="field">
         <label for="w-prob">Probability %</label>
         <input id="w-prob" type="number" min="0" max="100" bind:value={wip.probability} />
       </div>
-      <div>
+      <div class="field">
         <label for="w-gross">Gross fee</label>
         <input id="w-gross" type="number" min="0" step="1000" bind:value={wip.gross_fee}
                placeholder="120000" />
       </div>
-      <div>
-        <label for="w-reporting">Reporting month</label>
+      <div class="field">
+        <label for="w-reporting">Reporting month <span class="req">*</span></label>
         <input id="w-reporting" type="month" bind:value={wip.reporting_month} required />
       </div>
-      <div>
+      <div class="field">
         <label for="w-completion">Completion month</label>
         <input id="w-completion" type="month" bind:value={wip.completion_month} />
       </div>
-      <div>
+      <div class="field">
         <label for="w-currency">Transaction currency</label>
         <select id="w-currency" bind:value={wip.transaction_currency}>
           <option>EUR</option>
@@ -326,7 +158,7 @@
           <option>USD</option>
         </select>
       </div>
-      <div>
+      <div class="field">
         <label for="w-fs">Fee schedule</label>
         <select id="w-fs" bind:value={wip.fee_schedule_id} disabled={!eligibleFeeSchedules.length}>
           <option value={null}>
@@ -337,7 +169,7 @@
           {/each}
         </select>
       </div>
-      <div class="wide">
+      <div class="field span-2">
         <label for="w-comments">Comments</label>
         <input id="w-comments" bind:value={wip.comments} placeholder="Phase 1 valuation work." />
       </div>
@@ -359,30 +191,8 @@
       value is a stored generated column, so it cannot drift from its inputs.
     </p>
   </form>
-</div>
+{/if}
 
 <style>
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
-  .step {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px; border-radius: 999px;
-    background: var(--accent-soft); color: #79b0ff;
-    font-size: 12px; font-weight: 700; margin-bottom: 8px;
-  }
-  .fields {
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 12px; margin-top: 12px;
-  }
-  .wide { grid-column: 1 / -1; }
-  .parent-strip { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .hint { font-size: 11px; margin: 6px 0 0; }
-  .error {
-    margin: 10px 0 0; padding: 8px 10px; background: #2d1618;
-    border: 1px solid #4a2626; border-radius: 7px; color: #ffb4ae; font-size: 12px;
-  }
-  .ok {
-    margin: 10px 0 0; padding: 8px 10px; background: #12321c;
-    border: 1px solid #1d4a2b; border-radius: 7px; color: #7ee787; font-size: 12px;
-  }
-  @media (max-width: 1100px) { .cols { grid-template-columns: 1fr; } }
 </style>

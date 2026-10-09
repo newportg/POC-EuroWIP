@@ -231,9 +231,9 @@ try {
       console.log(`tab "${label}": ${tabRes.result.value}, content ${shown.result.value ? 'rendered' : 'MISSING'}`);
     }
 
-    // Drive the real creation flow: fill the instruction form, submit, then use
-    // the resulting parent to create a WIP line. This is the path a user takes,
-    // so it catches wiring that the Node suite cannot see.
+    // Drive the real creation flow: step through the instruction wizard, accept,
+    // then add a WIP line under it. This is the path a user takes, so it catches
+    // wiring that the Node suite cannot see.
     const createFlow = await send('Runtime.evaluate', {
       awaitPromise: true,
       returnByValue: true,
@@ -243,6 +243,8 @@ try {
         const text = () => app.innerText;
         const tab = (name) => [...document.querySelectorAll('nav .tab')]
           .find(b => b.textContent.trim().toLowerCase() === name).click();
+        const pill = (id) => [...document.querySelectorAll('.step-pill')]
+          .find(b => b.dataset.step === id);
 
         const setNative = (el, value) => {
           const proto = el instanceof HTMLSelectElement
@@ -252,32 +254,64 @@ try {
           el.dispatchEvent(new Event('input', { bubbles: true }));
           el.dispatchEvent(new Event('change', { bubbles: true }));
         };
-        const submit = (form) => form.requestSubmit();
 
-        // --- step 1: instruction
+        // --- the instruction wizard, step by step
         tab('create');
         await sleep(300);
-        const forms = [...document.querySelectorAll('form')];
-        if (forms.length < 2) return { error: 'expected two creation forms, found ' + forms.length };
-        const instructionForm = forms[0];
-        setNative(instructionForm.querySelector('#i-sl'), 'Valuations');
-        setNative(instructionForm.querySelector('#i-brand'),
-          instructionForm.querySelector('#i-brand').options[1].value);
-        setNative(instructionForm.querySelector('#i-le'),
-          instructionForm.querySelector('#i-le').options[1].value);
-        setNative(instructionForm.querySelector('#i-office'),
-          instructionForm.querySelector('#i-office').options[1].value);
-        setNative(instructionForm.querySelector('#i-rev'), '275000');
-        setNative(instructionForm.querySelector('#i-neg'), 'Camille Roux');
-        await sleep(150);
-        submit(instructionForm);
-        await sleep(500);
-        const created = /Created INS-\\d{6}/.test(text());
-        if (!created) return { error: 'instruction was not created', snippet: text().slice(0, 300) };
-        const ref = (text().match(/Created (INS-\\d{6})/) || [])[1];
 
-        // --- step 2: WIP line under it
-        const wipForm = [...document.querySelectorAll('form')][1];
+        // Step 1 — Type: choose the service line (this also advances the wizard).
+        const card = document.querySelector('.type-card[data-sl="Valuations"]');
+        if (!card) return { error: 'service-line card not found' };
+        card.click();
+        await sleep(150);
+
+        // Step 2 — Client: pick a brand, then the legal entity it owns. The
+        // entity select is empty until the brand is chosen, so drive it in order.
+        pill('client').click();
+        await sleep(150);
+        const brandSel = document.querySelector('#i-brand');
+        if (!brandSel || brandSel.options.length < 2) return { error: 'brand options missing' };
+        setNative(brandSel, brandSel.options[1].value);
+        await sleep(200);
+        const leSel = document.querySelector('#i-le');
+        if (!leSel || leSel.options.length < 2) return { error: 'legal entity options missing' };
+        setNative(leSel, leSel.options[1].value);
+        await sleep(200);
+
+        // Step 5 — Terms: owning office, expected revenue and negotiator.
+        pill('terms').click();
+        await sleep(150);
+        const officeSel = document.querySelector('#i-office');
+        if (!officeSel || officeSel.options.length < 2) return { error: 'office options missing' };
+        setNative(officeSel, officeSel.options[1].value);
+        setNative(document.querySelector('#i-rev'), '275000');
+        setNative(document.querySelector('#i-neg'), 'Camille Roux');
+        await sleep(200);
+
+        // Step 6 — Review: the readiness list must be fully green, then accept.
+        pill('review').click();
+        await sleep(200);
+        const missingRequired = document.querySelectorAll('.readiness-row.missing').length;
+        const acceptBtn = document.querySelector('#accept-btn');
+        if (!acceptBtn) return { error: 'accept button missing' };
+        if (acceptBtn.disabled) {
+          return { error: 'accept still disabled', missing: missingRequired };
+        }
+        acceptBtn.click();
+        await sleep(600);
+        if (!/INS-\\d{6} accepted/.test(text())) {
+          return { error: 'instruction was not accepted', snippet: text().slice(0, 400) };
+        }
+        const ref = (text().match(/(INS-\\d{6}) accepted/) || [])[1];
+
+        // --- the WIP line, under the instruction we just accepted
+        const wipModeBtn = [...document.querySelectorAll('button')]
+          .find(b => b.textContent.trim() === 'Create a WIP line');
+        if (!wipModeBtn) return { error: 'WIP-line mode button missing', ref };
+        wipModeBtn.click();
+        await sleep(250);
+        const wipForm = document.querySelector('#wip-line-form');
+        if (!wipForm) return { error: 'WIP-line form missing', ref };
         const parentSelect = wipForm.querySelector('#w-instr');
         const newOption = [...parentSelect.options].find(o => o.textContent.includes(ref));
         if (!newOption) return { error: 'new instruction not offered as a WIP parent', ref };
@@ -286,29 +320,25 @@ try {
         setNative(wipForm.querySelector('#w-retained'), '15000');
         setNative(wipForm.querySelector('#w-prob'), '40');
         setNative(wipForm.querySelector('#w-gross'), '75000');
-        await sleep(150);
-        submit(wipForm);
-        await sleep(600);
+        await sleep(200);
+        wipForm.requestSubmit();
+        await sleep(700);
 
         // On success the panel routes to the WIP tab, filtered to the new line.
-        // The "Created WIP-000017" confirmation is therefore already gone by the
-        // time we look for it, so assert on what the user is left looking at instead.
+        // The confirmation is therefore already gone by the time we look, so
+        // assert on what the user is left looking at instead.
         const onWipTab = [...document.querySelectorAll('nav .tab')]
           .some(b => b.textContent.trim() === 'WIP' && b.classList.contains('active'));
         const bodyRows = [...document.querySelectorAll('tbody tr')];
-        // First row that actually carries a line reference: the totals tables
-        // render their own tbody rows above the line list.
         const wipRef = bodyRows
           .map(tr => tr.textContent.match(/WIP-\\d{6}/)?.[0])
           .find(Boolean) ?? null;
         const searchBox = document.querySelector('input.search')?.value ?? null;
 
         if (!onWipTab) {
-          // Staying put means the submit was refused; surface the rule's reason.
           return { error: 'WIP line was not created', snippet: text().slice(0, 300) };
         }
-        // The row should be visible; sometimes rendering takes a tick. We'll check both
-        const rowVisible = bodyRows.some(tr => tr.textContent.includes('WIP-000017'));
+        const rowVisible = wipRef !== null;
         return { ref, wipRef, onWipTab, rowVisible, listed: bodyRows.length, search: searchBox };
       })()`
     });
