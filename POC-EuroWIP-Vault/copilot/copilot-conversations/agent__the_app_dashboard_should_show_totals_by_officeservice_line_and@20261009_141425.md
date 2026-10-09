@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_edf351232ffeskz9YtlbFutBJJ"
 agentLabel: "Dashboard totals by office and status"
-usage: '{"usedTokens":83753,"contextWindow":200000,"updatedAt":1791555743579}'
+usage: '{"usedTokens":123538,"contextWindow":200000,"updatedAt":1791556850411}'
 tags:
   - copilot-conversation
 ---
@@ -382,3 +382,63 @@ So the Property tab's Find + Verify will work against the real API. Nothing to c
 
 The WIP tab now leads straight from the KPI bar into the filtered line list and detail panel.
 [Timestamp: 2026/10/09 15:19:57]
+
+**user**: at the completion of a instruction review a wip entry should be created. there shouldn't be a separate wip creation tab
+[Timestamp: 2026/10/09 15:29:27]
+
+**ai**: The seed mirrors `gross = net` with the office retaining 20%, so I'll derive the new WIP line from the Terms values with that shape. First, collapse `CreatePanel` to just the wizard.Now wire the WIP creation into the wizard's accept.Now update the browser check's post-accept path (the WIP-creation mode is gone).PASS. Let me run the domain suites too, then stop the server and commit.Done, committed as `59bd23d`.
+
+**Change**
+
+- **Create tab is now just the wizard.** The "Create an Instruction / Create a WIP line" toggle and the whole WIP form are gone — `CreatePanel.svelte` is a thin wrapper around `InstructionWizard`.
+- **Accepting the review opens the WIP line.** After `createInstruction` succeeds, the wizard calls `createWip` for the same instruction, and the success banner names both refs (e.g. "INS-000009 accepted · WIP-000017 opened").
+
+**How I derived the WIP fields from the Terms step** (worth a look — this was the one judgement call):
+
+| WIP field | Source |
+| --- | --- |
+| `instruction_id` | the just-created instruction |
+| `gross_fee`, `net_fee_to_group` | expected revenue |
+| `office_retained` | 20% of expected revenue |
+| `probability` | 100 |
+| `reporting_month` | first of the current month |
+| `completion_month` | month of the type's target-completion date, else null |
+| `transaction_currency` | Terms currency |
+| `comments` | Terms notes |
+
+The 20% office share and `probability: 100` are assumptions — 20% mirrors the seeded fixtures, and 100 reflects a just-signed instruction. If you'd rather the new line sit at a pipeline probability (e.g. 25) or carry a different group/office split, tell me the rule and I'll change it in one place.
+
+**Verification**
+
+- `npm run check` — 0 errors, 0 warnings
+- `npm test` — 31 + 45 pass
+- `npm run build` — ok
+- browser-check — **PASS**: drove the wizard, accepted, confirmed the banner named `WIP-000017`, then verified it's in the WIP list (17 rows).
+
+One loose end: `App.svelte`'s `viewInWip` helper is now unreferenced (nothing navigates away on accept, so the user stays on the review with the frozen payload and both refs). I left it in place rather than expand the diff — say the word if you'd prefer the accept to jump straight to the new line on the WIP tab instead.
+[Timestamp: 2026/10/09 15:29:27]
+
+**user**: on the property tab search line can you include a country dropdown which shows flag images rather than text, and default to uk
+[Timestamp: 2026/10/09 15:35:51]
+
+**ai**: Let me check what flag assets or country handling already exist, and what's in the public folder.Flags need real images (Windows doesn't render flag emoji) and native `<select>` can't show images in options — so I'll add small SVG flag files and a custom dropdown. Let me check the Vite config first.I'll add the flags as imported SVG assets (small enough that Vite inlines them, so they survive the relative `base`), plus a custom dropdown component.Now wire it into the wizard: default the country to the UK, put the picker on the search row, and drop the old text country field.Now update the browser check to assert the flag picker and its UK default (the SVGs get inlined as data URIs, so I check the image and the title).Now the CSS for the picker.No separate flag files emitted — they inlined as data URIs. Now the browser check.PASS. Stop the server and commit.Done, committed as `d98a791`.
+
+**Change**
+
+- The Property tab's Loqate search row now leads with a **country picker that shows flag images**, defaulting to the UK. Picking a country sets the address country *and* drives the Loqate search's ISO filter.
+- The old separate text Country field is gone — the picker is now the single source of truth for `property.country`, so there's no duplicate control.
+- Countries: United Kingdom, France, Germany, Spain, Poland, Netherlands, plus a globe for "Other".
+
+**Why it's built this way**
+
+- Native `<select>` options can't render images (unreliably in Chrome on Windows at best), so this is a small custom dropdown (`CountrySelect.svelte`) with an outside-click dismiss.
+- Flag "images" are real SVG files (`src/assets/flags/*.svg`) rather than emoji — emoji flags don't render as flags on Windows. They're imported through `flags.js` so Vite rewrites the URLs against `base: './'`, and at under 4 KB each they inline as data URIs (the build emitted no extra asset files).
+
+**Verification**
+
+- `npm run check` — 0 errors, 0 warnings
+- `npm run build` — ok
+- browser-check — **PASS**, with a new assertion: the picker renders a flag `<img>` and defaults to `United Kingdom`.
+
+One note for when you look at it in the running app: since the flags are inlined SVGs they'll look crisp at any size, but if you'd prefer to also show the country name next to the flag in the collapsed button (rather than just the flag + caret), that's a one-line change — say the word.
+[Timestamp: 2026/10/09 15:35:51]
