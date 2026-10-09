@@ -263,3 +263,18 @@ h3 { font-size: 13px; color: var(--muted); text-transform: uppercase;
   margin: 8px 0 0; }
 
 .verified-fill input, .verified-fill select { border-color: #1d4a2b; background: #101a12; }
+
+.country-select { position: relative; flex: 0 0 auto; }
+.country-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px; }
+.country-btn img { display: block; width: 22px; height: 15px; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15); }
+.country-btn .caret { font-size: 9px; color: var(--muted); line-height: 1; }
+.country-menu { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 200px;
+  list-style: none; margin: 0; padding: 4px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45); max-height: 280px; overflow: auto; }
+.country-option { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  background: none; border: none; border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+.country-option:hover:not(:disabled) { background: var(--panel-2); border-color: transparent; }
+.country-option.selected { background: var(--accent-soft); }
+.country-option img { display: block; width: 22px; height: 15px; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15); }

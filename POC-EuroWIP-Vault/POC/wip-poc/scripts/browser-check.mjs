@@ -301,8 +301,13 @@ try {
         pill('property').click();
         await sleep(150);
         if (!document.querySelector('#loqateQuery')) return { error: 'Loqate search box missing on Property' };
-        if (!document.querySelector('#country')) return { error: 'country select missing on Property' };
-        setNative(key('country'), 'United Kingdom');
+        const countryBtn = document.querySelector('.country-btn');
+        if (!countryBtn) return { error: 'country flag picker missing on Property' };
+        const flagImg = countryBtn.querySelector('img');
+        if (!flagImg || !flagImg.getAttribute('src')) return { error: 'country flag image not rendered' };
+        if (countryBtn.getAttribute('title') !== 'United Kingdom') {
+          return { error: 'country did not default to the UK', title: countryBtn.getAttribute('title') };
+        }
         setNative(key('address'), '1 Liverpool Street');
         setNative(key('city'), 'London');
         setNative(key('postcode'), 'EC2M 7NH');

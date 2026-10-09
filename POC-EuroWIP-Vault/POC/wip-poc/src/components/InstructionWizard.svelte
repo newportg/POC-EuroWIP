@@ -8,15 +8,16 @@
     CLIENT_FIELDS, findMockClients, MOCK_OFFICES, getOfficeByName
   } from '../lib/wizardConfig.js';
   import {
-    OPTION_COUNTRIES, COUNTRY_ISO, loadLoqateKey, saveLoqateKey,
+    COUNTRY_ISO, loadLoqateKey, saveLoqateKey,
     loqateFind, loqateVerify, mapVerifyMatch, matchIso
   } from '../lib/loqate.js';
+  import CountrySelect from './CountrySelect.svelte';
 
   let { oncreated = () => {}, onview = () => {}, version = 0 } = $props();
 
   let typeKey = $state('');
   let client = $state({});
-  let property = $state({});
+  let property = $state({ country: 'United Kingdom' });
   let details = $state({});
   let terms = $state({ currency: '' });
 
@@ -528,6 +529,10 @@
           <span class="badge badge-loqate">LOQATE</span>
         </div>
         <div class="loqate-row">
+          <CountrySelect
+            value={property.country}
+            onchange={(c) => { property.country = c; onCountryChange(); }}
+          />
           <input type="text" id="loqateQuery" autocomplete="off" bind:value={loqateQuery}
                  oninput={onLoqateInput}
                  placeholder="Postcode or street address, e.g. EC2M 7NH" />
@@ -576,15 +581,6 @@
           <input type="text" id="postcode" data-key="postcode" bind:value={property.postcode}
                  oninput={() => (verified.postcode = false)} placeholder="e.g. EC2M 7NH" />
           <div class="err">Postcode is required</div>
-        </div>
-        <div class="field" class:verified-fill={verified.country}>
-          <label for="country">Country <span class="req">*</span></label>
-          <select id="country" data-key="country" bind:value={property.country} onchange={onCountryChange}>
-            <option value="">Select…</option>
-            {#each OPTION_COUNTRIES as c (c)}<option>{c}</option>{/each}
-            <option>Other</option>
-          </select>
-          <div class="err">Country is required</div>
         </div>
         <div class="field">
           <label for="titleNumber">Title number</label>
