@@ -197,6 +197,11 @@
   },
   "active": "f45f33bb81cb2350",
   "lastOpenFiles": [
+    "POC/wip-poc/dist/assets/index-Ccog1kqf.css",
+    "POC/wip-poc/dist/assets/index-D18a348n.js",
+    "POC/wip-poc/dist/assets/index-DAUcD0Or.js",
+    "POC/wip-poc/dist/assets/index-Dj8Oby_J.css",
+    "POC/wip-poc/src/components/TotalsTables.svelte",
     "copilot/copilot-conversations/agent__the_app_dashboard_should_show_totals_by_officeservice_line_and@20261009_141425.md",
     "wiki/archimate/wip-system-landscape.md",
     "POC/wip-poc/dist/assets/index-BsbKZUKG.js",
@@ -227,11 +232,6 @@
     "copilot/copilot-conversations/agent__can_you_reorder_the_app_so_that_create_appears_before@20261008_154229.md",
     "README.md",
     "raw/European CRM Architecture Review 2.pdf",
-    "copilot/copilot-conversations/agent__can_you_read_the_pdf_file_in_the_raw_directory@20261006_111305.md",
-    "Dashboard.md",
-    "POC/wip-poc/dist/assets/index-DVUZ4RIc.js",
-    "POC/wip-poc/preview.err",
-    "POC/wip-poc/preview.log",
-    "POC/wip-poc/dist/assets/index-Dng3w_Ic.js"
+    "copilot/copilot-conversations/agent__can_you_read_the_pdf_file_in_the_raw_directory@20261006_111305.md"
   ]
 }
