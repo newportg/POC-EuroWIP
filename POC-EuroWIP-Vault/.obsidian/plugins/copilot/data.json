@@ -476,15 +476,6 @@
     {
       "providerId": "ba6c506c-baa8-4d6f-acd6-9d309ba352e7",
       "info": {
-        "id": "opencode/fledge-alpha-free",
-        "displayName": "OpenCode Zen/Fledge Alpha Free"
-      },
-      "configuredModelId": "c79b5fbe-870b-4feb-9339-141541509b61",
-      "configuredAt": 1791281455334
-    },
-    {
-      "providerId": "ba6c506c-baa8-4d6f-acd6-9d309ba352e7",
-      "info": {
         "id": "opencode/ling-3.1-flash-free",
         "displayName": "OpenCode Zen/Ling 3.1 Flash Free"
       },
