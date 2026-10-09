@@ -5,7 +5,7 @@ backendId: opencode
 projectId: "debe6f1a-9d0f-437b-b8db-43703f81ca1f"
 sessionId: "ses_edf351232ffeskz9YtlbFutBJJ"
 agentLabel: "Dashboard totals by office and status"
-usage: '{"usedTokens":132140,"contextWindow":200000,"updatedAt":1791557337040}'
+usage: '{"usedTokens":121753,"contextWindow":200000,"updatedAt":1791559219975}'
 tags:
   - copilot-conversation
 ---
@@ -463,3 +463,166 @@ One note for when you look at it in the running app: since the flags are inlined
 
 One behaviour note: changing the office *manually* still clears any already-picked negotiator (they belonged to the old office). That's intentional, but if you'd rather it keep the negotiator when they happen to remain valid, that's a small tweak.
 [Timestamp: 2026/10/09 15:46:02]
+
+**user**: can you construct a animated slideshow to demonstrate how to use the app.
+[Timestamp: 2026/10/09 15:52:56]
+
+**ai**: This is a multi-step build, so let me first look at where things live and set up a plan.## Objective
+- Make the WIP POC's **Create tab** the reference "Create an Instruction" wizard (option **A**: faithful reference UX *and* real DB writes), then refine it per user requests: WIP tab has no "totals by" sections, accepting an instruction auto-creates its first WIP line (no separate WIP-create mode), and the Property search line has a flag-image country picker defaulting to the UK.
+
+## Important Details
+- App: `C:\Source\Obsidian\Projects\POC-EuroWIP\POC-EuroWIP-Vault\POC\wip-poc` (Svelte 5 runes + `sql.js`, in-memory + IndexedDB). Git root `C:\Source\Obsidian\Projects\POC-EuroWIP`.
+- **User directives (chronological, all still in force):**
+  1. Property tab uses **the same Loqate API** as the reference (`POC-Instructions`).
+  2. Client/Details/Terms must have the **same fields and mocks** as reference: mock client directory + free-text fields, 10 mock offices w/ negotiators + default currency, dynamic per-type Details — **replacing** the old brand→legal-entity→contact + real-office dropdowns.
+  3. Keep WIP chain: freeze `{kf_Instruction, kf_<entity>}` payload at Accept **and** write a real `instruction` row.
+  4. Loqate key: "use that key" → `BY92-NN99-ER43-XT19` kept as `LOQATE_DEFAULT_KEY` (verified live via Find probe).
+  5. WIP tab must **not** show the "Totals by status/office/service line" sections (Dashboard-only).
+  6. **Completing the instruction review creates a WIP entry; no separate WIP-creation tab/mode.**
+  7. Property search line gets a **country dropdown showing flag images**, defaulting to UK.
+  8. Terms tab: negotiators list filtered by office selection **and vice versa** (current task).
+- Terms→WIP derivation on accept (agent's stated assumption, easy to change): `gross_fee = net_fee_to_group = expectedRevenue`, `office_retained = 20% of revenue`, `probability = 100`, `reporting_month = first of current month`, `completion_month = month of details.kf_targetcompletiondate` (else null), `transaction_currency = terms.currency`, `comments = terms.notes`.
+- Reference wizard: `C:\Source\Obsidian\Projects\POC-Instructions\POC-Instructions-Vault\POC\instruction-wizard.html` (`TYPES` 1323-1489, `MOCK_CLIENTS` 2212-2262, `MOCK_OFFICES` 2353-2364, `loqateFind` 1889, `loqateVerify` 1947, `buildRecord` 3033).
+- `TYPES`: 13 entries `{ name, entity (kf_*), core (Instruction/Mandate/Engagement), serviceLine, icon, role, desc, fields[] }`; all 13 have required `kf_instructiondate`.
+- Service-line map: `'Leasing (Commercial Agency)'→'Leasing'`, `'Occupier Strategy & Solutions'→'OSS'`, `'Workplace Consulting'→'Workplace'`, `'Development Consultancy'→'Development'`; other 9 pass through.
+- Office→`business_unit`: city match first, else country code (`UK/ES/FR/DE/PL`), else first business_unit.
+- `createInstruction(input)` (repo.js:332) requires `service_line`, `client_account_id`, `legal_entity_account_id`, `owning_office_id`, `start_date`; params: `instruction_type, service_line, client_account_id, legal_entity_account_id, primary_contact_id, property_id, owning_office_id, instruction_status, start_date, signed_date, expected_revenue, termination_reason, sector, negotiator, comments`. PL-1 check requires matching `service_line_parent`.
+- Seed WIP shape (mirrored for the 20% assumption): `net = gross`, `office_retained = 20% of net`.
+- Flags built as **SVG assets** (`src/assets/flags/*.svg`) imported via `src/lib/flags.js` so Vite rewrites against `base: './'`; under the 4096-byte inline limit → emitted as **data URIs** (no extra dist files). Emoji flags rejected (don't render on Windows); native `<select>` can't show images → custom `CountrySelect.svelte` with outside-click dismiss.
+- Active tab detection in browser-check uses `b.classList.contains('active')` on `nav .tab`.
+- Verify loop (in `POC\wip-poc`): `npm run check` (svelte-check, 0 errors/0 warnings required), `npm test` (= `npm run verify && npm run smoke`; 31 + 45 pass), `npm run build`; browser-check needs `npm run preview -- --port 4173` (start: PowerShell `Start-Process npm.cmd -ArgumentList 'run','preview','--','--port','4173' -WindowStyle Hidden`; kill: `Get-NetTCPConnection -LocalPort 4173 -State Listen` → `Stop-Process -Id $c.OwningProcess -Force`).
+- AGENTS.md: commit after meaningful changes, **only app files** (`src`, `scripts`) — never `.obsidian/workspace.json` or `copilot/copilot-conversations/*.md`.
+- Escaping gotcha: inside `browser-check.mjs` template literals regexes need `\\d` (e.g. `/INS-\\d{6}/`) or they reach the browser as `d{6}`.
+- Fresh-DB baselines: next instruction `INS-000009`, next WIP `WIP-000017` (16 seeded WIP, 8 instructions).
+
+## Work State
+### Completed
+- Dashboard rounds `0fbc9cf`, `bf92978` (KPIs + totals; line list on WIP tab).
+- **`c871194`** "poc: create wizard is a faithful port of the reference instruction form" (6 files, +1362/-325):
+  - `src/lib/wizardConfig.js` (new): `TYPES` (13 verbatim), `STEPS`, `REQUIRED_LABELS`, `SERVICE_LINE_MAP`+`mapServiceLine`, `MOCK_CLIENTS` (15), `CLIENT_FIELDS`, `findMockClients`, `MOCK_OFFICES` (10), `getOfficeByName`.
+  - `src/lib/loqate.js` (new): `LOQATE_FIND_URL`/`LOQATE_VERIFY_URL`/`LOQATE_DEFAULT_KEY`/`LOQATE_KEY_STORAGE`, `OPTION_COUNTRIES`, `COUNTRY_ISO`, `ISO_TO_OPTION`, `loadLoqateKey`/`saveLoqateKey`, `loqateFind`, `loqateVerify`, `optionForCountry`, `resolveCountry`, `matchIso`, `mapVerifyMatch`.
+  - `src/lib/repo.js`: added `nextId(table)`, `resolveClientAccounts({clientName, legalEntity})`, `resolveContact({contactName, accountId})`, `OFFICE_COUNTRY` map, `resolveOfficeId(office)`, `resolveProperty({address, city, postcode, country, sector})`.
+  - `src/components/InstructionWizard.svelte`: full rewrite (6 steps, type-card grid, mock client lookup, Loqate Find+Verify box w/ key override + raw panel, dynamic Details w/ weekly→monthly→annual recalc, mock-office Terms, readiness + review + accept).
+  - `src/app.css`: card-header, badges, type-card icon/desc, Loqate panel styles.
+  - `scripts/browser-check.mjs`: createFlow drives the new wizard (mock client lookup, direct Property field fill, `#acceptBtn`).
+- Loqate key confirmed live: Find probe on `EC2M 7NH`/GB returned "1 Liverpool Street London EC2M 7NH" + "SG2 7NH Stevenage". No code change needed.
+- **`12ffdb0`** "poc: WIP tab drops the totals-by breakdowns (Dashboard-only)": `App.svelte` split the shared `overview` snippet into `kpis()` + `totals()`; WIP tab renders only `kpis()`. browser-check asserts WIP tab `KPI bar: shown`, `"totals by" sections: absent`.
+- **`59bd23d`** "poc: accepting an instruction opens its first WIP line; drop the WIP-create mode" (3 files, +47/-234): `CreatePanel.svelte` collapsed to a thin `<InstructionWizard>` wrapper (mode switch + WIP form removed); wizard `accept()` calls `createWip` after `createInstruction`, tracks `wipRef`/`wipError`, banner shows both refs; browser-check asserts the WIP ref from the banner and the row on the WIP tab.
+- **`d98a791`** "poc: property search line gets a flag country picker, defaulting to the UK" (12 files, +145/-13): new `src/assets/flags/{gb,fr,de,es,pl,nl,other}.svg`, `src/lib/flags.js` (`COUNTRY_FLAG`, `flagFor`), `src/components/CountrySelect.svelte` (flag-image dropdown, outside-click close); wizard `property` defaults to `{'country':'United Kingdom'}`, picker moved into `.loqate-row`, old text Country field removed, `OPTION_COUNTRIES` import dropped; CSS added; browser-check asserts flag `<img>` renders and `title === 'United Kingdom'`.
+
+### Active
+- Requirement 8 (Terms bidirectional office↔negotiator filtering). Just applied edit to `src/lib/wizardConfig.js` (after `getOfficeByName`): added `export const ALL_NEGOTIATORS = MOCK_OFFICES.flatMap((o) => o.negotiators);` and `export function officeForNegotiator(name) { return MOCK_OFFICES.find((o) => o.negotiators.includes(name)) || null; }`.
+- Still to do for req 8:
+  - `InstructionWizard.svelte`: import `ALL_NEGOTIATORS`, `officeForNegotiator`; change `negotiators` derived to `getOfficeByName(terms.owningOffice)?.negotiators ?? ALL_NEGOTIATORS`; add `onNegotiatorChange(name)` setting `terms.assignedTo`, then `terms.owningOffice = office.name` + default currency when `!currencyTouched`; remove `disabled={!terms.owningOffice}` from `#assignedTo`; update placeholder/hint; wire `onchange` on the negotiator select.
+  - `scripts/browser-check.mjs` Terms section: assert office→negotiator filtering (e.g. Paris list has `Claire Fournier`, not `Pablo García`), then clear office, assert full directory returned, pick `Pablo García` and assert `#owningOffice` becomes `Barcelona`; then set `feeBasis`/`expectedRevenue` and continue to Review.
+  - Run `npm run check`, `npm test`, `npm run build`, preview + `node scripts/browser-check.mjs`; commit app files only.
+- Known loose end (left intentionally, user may or may not want it): `App.svelte`'s `viewInWip` is now unreferenced (accept stays on Review showing banner + frozen payload + both refs).
+- Note: negotiator names across the 10 mock offices are all unique (safe to flatten).
+
+### Blocked
+- (none)
+
+## Next Move
+1. Wire `ALL_NEGOTIATORS`/`officeForNegotiator` into `InstructionWizard.svelte` (derived negotiator list + `onNegotiatorChange` + drop the `disabled` on `#assignedTo`), then update the Terms assertions in `scripts/browser-check.mjs`.
+2. Run `npm run check`, `npm test`, `npm run build`, then preview + `node scripts/browser-check.mjs`, and commit only the app files (`src`, `scripts`).
+
+## Relevant Files
+- `C:\Source\Obsidian\Projects\POC-Instructions\POC-Instructions-Vault\POC\instruction-wizard.html`: reference wizard (source of the ported form/mocks/Loqate).
+- `POC-EuroWIP-Vault/POC/wip-poc/src/lib/wizardConfig.js`: TYPES/mocks/steps/`mapServiceLine`/`getOfficeByName`; **just extended** with `ALL_NEGOTIATORS` + `officeForNegotiator`.
+- `POC-EuroWIP-Vault/POC/wip-poc/src/lib/loqate.js`: Loqate Find/Verify, country/ISO maps, address mapping.
+- `POC-EuroWIP-Vault/POC/wip-poc/src/lib/flags.js`: `COUNTRY_FLAG`/`flagFor` (SVG asset URLs → data URIs).
+- `POC-EuroWIP-Vault/POC/wip-poc/src/assets/flags/*.svg`: gb/fr/de/es/pl/nl/other flag images.
+- `POC-EuroWIP-Vault/POC/wip-poc/src/lib/repo.js`: `createInstruction`/`createWip` + resolvers (`resolveClientAccounts`, `resolveContact`, `resolveOfficeId`, `resolveProperty`, `nextId`) and getters incl. `getTotalsByStatus/Office/ServiceLine`.
+- `POC-EuroWIP-Vault/POC/wip-poc/src/components/InstructionWizard.svelte`: the wizard; **next edit target** (negotiator↔office linkage).
+- `POC-EuroWIP-Vault/POC/wip-poc/src/components/CountrySelect.svelte`: flag-image country dropdown (value = country name).
+- `POC-EuroWIP-Vault/POC/wip-poc/src/components/CreatePanel.svelte`: thin wrapper around the wizard.
+- `POC-EuroWIP-Vault/POC/wip-poc/src/App.svelte`: tabs, `version` invalidation, `kpis()`/`totals()` snippets, `viewInWip`.
+- `POC-EuroWIP-Vault/POC/wip-poc/src/app.css`: theme + wizard/flag-picker CSS.
+- `POC-EuroWIP-Vault/POC/wip-poc/scripts/browser-check.mjs`: E2E check; **next edit target** (Terms linkage assertions).
+- `POC-EuroWIP-Vault/POC/wip-poc/scripts/smoke.mjs`, `verify.mjs`: domain/schema suites (`npm test`).
+- `POC-EuroWIP-Vault/AGENTS.md`: commit-after-changes + vault housekeeping exclusions.Now I'll scaffold the outputs folder and write a capture script that drives the real app and screenshots each screen.I can't view images directly, but the sizes confirm real content rendered. Let me pull the app's theme and structure so the slideshow matches it and I can add precise highlight callouts.I have everything I need. Let me extend the capture script to also record precise on-screen positions for highlight callouts, then re-run it.All callouts found (with real coordinates). Now I'll build the slideshow itself, embedding those coordinates.Now let me verify the deck actually loads and advances in a real browser.Deck passes. Let me add deep-link support (`#slide`) and capture a couple of poster previews.
+
+**Error:** Internal error: Bad Request: {"model":"big-pickle"}
+[Timestamp: 2026/10/09 15:52:56]
+
+**user**: what do i open to see the slideshow
+[Timestamp: 2026/10/09 16:04:17]
+
+**ai**: Open this file in a browser — double-click it, or paste the path into your browser's address bar:
+
+`C:\Source\Obsidian\Projects\POC-EuroWIP\POC-EuroWIP-Vault\copilot\projects\EuroWIP\outputs\app-walkthrough.html`
+
+It's a single self-contained HTML file; the slides alongside it in `outputs\slides\` are its screenshots, so keep that folder next to the HTML (they're already there).
+
+Quick way to launch it from a terminal:
+
+```powershell
+Start-Process "C:\Source\Obsidian\Projects\POC-EuroWIP\POC-EuroWIP-Vault\copilot\projects\EuroWIP\outputs\app-walkthrough.html"
+```
+
+**Controls** (it auto-plays on its own):
+- `→` / `←` — next / previous slide
+- `Space` — play / pause
+- `F` — fullscreen (best for presenting)
+- The dots along the bottom jump to any slide; you can also deep-link a step, e.g. append `#4` to the URL.
+
+It runs entirely offline and needs no server. Want me to open it now, and/or capture a few `poster-*.png` stills from it as thumbnails?
+[Timestamp: 2026/10/09 16:04:17]
+
+**user**: can you make the slideshow available from the app, also on starting the app ask the user if they want to see the slideshow first
+[Timestamp: 2026/10/09 16:07:47]
+
+**ai**: Good idea — I'll ship the deck inside the app and add a startup prompt + a header link. First, a quick look at the build setup.Now wire it into the app — the startup prompt and a header link.Now teach the automation to dismiss the prompt so it doesn't cover the first screenshot.The app side passes. Now confirm the served tour page itself loads and advances over HTTP.Both the app prompt and the served tour pass. Let me review what changed and commit the app side.Done and committed as `0e4cebc`.
+
+## What I changed
+
+**1. The tour now ships with the app**
+- Copied the slideshow to `POC/wip-poc/public/tour/` (`index.html` + `slides/*.png`), so Vite serves it at **`/tour/index.html`** — no separate file to open, it travels with the build.
+
+**2. A startup prompt**
+When the app finishes loading, a small modal asks:
+> **New here?** … *Watch the slideshow* / *Skip to the app*
+
+"Watch the slideshow" opens the tour in a new tab and closes the prompt; "Skip" just closes it.
+
+**3. A permanent link in the app**
+A **▶ Tour** button sits in the header, top-right (before the month selector), so it's reachable any time.
+
+## Verification
+- `npm run check` — 0 errors/warnings; `npm test` — 31 + 45 pass; `npm run build` — ok, `dist/tour/` emitted.
+- `browser-check.mjs` — **PASS**. It now also asserts the prompt is *offered on start* and the *Tour button is present*, then dismisses the prompt (so it doesn't cover the screenshots/probes).
+- `verify-deck.mjs` against the **served** URL `http://localhost:4173/tour/index.html` — **PASS** (13 slides, 11 images, advancing).
+
+## Two notes
+- **Duplication:** the master source of the deck is still the vault copy at `copilot/projects/EuroWIP/outputs/app-walkthrough.html` (that's where `capture-tour.mjs` / `verify-deck.mjs` live). The app copy in `public/tour/` is a snapshot of it. If we iterate on the deck, I'll regenerate `public/tour/` from outputs in one step — flag it and I can wire a small sync script so they never drift.
+- **Prompt every start:** right now it asks on each load, exactly as you asked. If that gets noisy, I can remember the choice in `localStorage` (show once, or add a "don't ask again") — say the word.
+
+Want me to sync-script the two copies, or add the "don't ask again" behaviour?
+[Timestamp: 2026/10/09 16:07:47]
+
+**user**: if you click on see the slideshow, you have to hit enter on the url bar to start the slideshow. can we go straignt there without the additional click
+[Timestamp: 2026/10/09 16:16:05]
+
+**ai**: That's Chrome focusing the new tab's URL bar rather than loading it — a new-tab popup quirk. The cleaner fix is to open the tour **inside the app** as a full-screen overlay, so there's no URL bar at all. Let me do that.Now teach the check to confirm the overlay opens in-page, then rebuild and verify.Let me strengthen the check to confirm the deck actually loads *inside* the app overlay.The overlay loads the full 13-slide deck in-page. Committing.Fixed — committed as `01efd09`.
+
+## What was happening
+`window.open(...)` opened the deck in a **new browser tab**, and Chrome focused that tab's URL bar rather than loading it — so the deck didn't start until you pressed Enter. That's a browser/OS quirk, not something I could reliably control from the page.
+
+## The fix
+The tour now opens **inside the app** as a full-screen overlay (`<iframe src="./tour/index.html">`), so:
+- No new tab, no URL bar, no extra keystroke — it **starts immediately** (the deck autoplays on load).
+- Both entry points use it: the startup prompt's *Watch the slideshow* and the header **▶ Tour** button.
+- A slim top bar has **✕ Back to the app**; `Esc` also closes it. The deck's own `f` key / fullscreen button still work.
+
+## Verified
+`browser-check` now drives it end to end and confirms the deck is really mounted in the overlay, not just that a tab opened:
+
+```
+startup walkthrough prompt
+  offered on start: yes
+  tour button:      present
+  tour overlay:     opens in-page (./tour/index.html) — 13 slides, active 0
+```
+
+`npm run check` 0/0, `npm run build` ok. If you'd upgraded to a new tab on purpose (e.g., to present on a second monitor), say so and I can make the Tour button *also* offer "open in a new tab" — but the in-app overlay is now the default, which is the straight-to-slideshow behaviour you asked for.
+[Timestamp: 2026/10/09 16:16:05]
