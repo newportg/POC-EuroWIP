@@ -9,8 +9,9 @@
 
 <div class="kpis">
   <div class="kpi">
-    <div class="kpi-label">Gross pipeline</div>
+    <div class="kpi-label">In hand</div>
     <div class="kpi-value">{fmt(kpi.gross_pipeline)}</div>
+    <div class="kpi-sub">gross WIP, not yet billed</div>
   </div>
   <div class="kpi accent">
     <div class="kpi-label">Weighted retained</div>

@@ -150,10 +150,13 @@ try {
         const cap = (re) => (text.match(re) || [])[1] ?? null;
         return {
           hasWipLine: /WIP-\\d{6}/.test(text),
-          kpiPipeline: cap(/gross pipeline\\s+([\\d,]+)/i),
+          kpiInHand: cap(/in hand\\s+([\\d,]+)/i),
           kpiWeighted: cap(/weighted retained\\s+([\\d,]+)/i),
           stale: cap(/stale lines\\s+(\\d+)/i),
           currencyWarning: /mixed currencies/i.test(text),
+          hasStatusTotals: /totals by status/i.test(text),
+          hasOfficeTotals: /totals by office/i.test(text),
+          hasServiceLineTotals: /totals by service line/i.test(text),
           tabs: [...document.querySelectorAll('nav .tab')].map(b => b.textContent.trim())
         };
       })()`,
@@ -162,10 +165,11 @@ try {
     const p = probe.result.value;
     console.log(`\nrendered content`);
     console.log(`  WIP line identifiers: ${p.hasWipLine ? 'present' : 'MISSING'}`);
-    console.log(`  gross pipeline KPI:   ${p.kpiPipeline ?? 'missing'}`);
+    console.log(`  in-hand KPI:          ${p.kpiInHand ?? 'missing'}`);
     console.log(`  weighted retained:    ${p.kpiWeighted ?? 'missing'}`);
     console.log(`  stale lines:          ${p.stale ?? 'missing'}`);
     console.log(`  mixed-currency notice: ${p.currencyWarning ? 'shown' : 'not shown'}`);
+    console.log(`  breakdown tables:     status ${p.hasStatusTotals ? 'yes' : 'NO'}, office ${p.hasOfficeTotals ? 'yes' : 'NO'}, service line ${p.hasServiceLineTotals ? 'yes' : 'NO'}`);
     console.log(`  tabs: ${p.tabs.join(' | ')}`);
 
     // Exercise a rule rejection through the real UI path.

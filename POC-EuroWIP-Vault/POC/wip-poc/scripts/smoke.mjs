@@ -164,10 +164,47 @@ await check('getKpis for one month', () => {
   assert(k.gross_pipeline > 0, 'month filter returned nothing');
   return `${months[0]}: ${k.gross_pipeline}`;
 });
-await check('getPipelineByServiceLine', () => {
-  const r = repo.getPipelineByServiceLine(null);
+await check('getTotalsByStatus', () => {
+  const r = repo.getTotalsByStatus(null);
+  assert(r.length === 4, `expected all four statuses, got ${r.length}`);
+  assert(r.every((s) => typeof s.lines === 'number'), 'status rows missing line counts');
+  const grossSum = r.reduce((a, s) => a + (s.gross ?? 0), 0);
+  const kpi = repo.getKpis(null);
+  const expected = (kpi.gross_pipeline ?? 0) + (kpi.billed ?? 0) + (kpi.paid ?? 0) + (kpi.lost ?? 0);
+  assert(Math.abs(grossSum - expected) < 0.01, `status gross ${grossSum} != KPI gross ${expected}`);
+  return r.map((s) => `${s.status}:${s.lines}`).join(' ');
+});
+await check('getTotalsByOffice', () => {
+  const r = repo.getTotalsByOffice(null);
+  assert(r.length > 0, 'no offices');
+  const totalLines = r.reduce((a, o) => a + o.lines, 0);
+  const wipCount = repo.getWip().length;
+  assert(totalLines === wipCount, `office rows cover ${totalLines} lines, expected ${wipCount}`);
+  return r.map((o) => `${o.group_name}:${o.lines}`).join(' ');
+});
+await check('getTotalsByServiceLine', () => {
+  const r = repo.getTotalsByServiceLine(null);
   assert(r.length > 0, 'no service lines');
-  return `${r.length} lines`;
+  // Every row must split cleanly across the four lifecycle states.
+  const bad = r.filter((s) => {
+    const parts = [s.in_hand, s.billed, s.paid, s.lost].map((v) => v ?? 0);
+    return Math.abs(parts.reduce((a, b) => a + b, 0) - s.total) > 0.01;
+  });
+  assert(bad.length === 0, `${bad.length} rows where statuses do not add up to the total`);
+  return `${r.length} service lines`;
+});
+await check('getTotalsByServiceLine honours the month filter', () => {
+  const months = repo.getPeriods().map((p) => p.reporting_month);
+  const r = repo.getTotalsByServiceLine(months[0]);
+  assert(r.length > 0, 'month filter returned nothing');
+  const kpi = repo.getKpis(months[0]);
+  const gross = r.reduce(
+    (a, s) => a + [s.in_hand, s.billed, s.paid, s.lost].reduce((x, y) => x + (y ?? 0), 0),
+    0
+  );
+  const expected = (kpi.gross_pipeline ?? 0) + (kpi.billed ?? 0) + (kpi.paid ?? 0) + (kpi.lost ?? 0);
+  assert(Math.abs(gross - expected) < 0.01, `month gross ${gross} != KPI gross ${expected}`);
+  return `${months[0]}: ${gross}`;
 });
 await check('getEvents', () => {
   const r = repo.getEvents();

@@ -3,6 +3,7 @@
   import { openDatabase } from './lib/db.js';
   import * as repo from './lib/repo.js';
   import KpiBar from './components/KpiBar.svelte';
+  import TotalsTables from './components/TotalsTables.svelte';
   import WipTable from './components/WipTable.svelte';
   import WipDetail from './components/WipDetail.svelte';
   import SidePanels from './components/SidePanels.svelte';
@@ -27,9 +28,13 @@
   let instructions  = $derived(repo.getInstructions());
   let serviceLines  = $derived(repo.getServiceLines());
   let periods       = $derived(repo.getPeriods());
-  let kpi           = $derived(repo.getKpis(month || null));
+  // The KPI and totals reads also key off `version`, so billing or losing a
+  // line refreshes them along with the table.
+  let kpi           = $derived(version >= 0 && repo.getKpis(month || null));
   let selected      = $derived(selectedId ? repo.getWipLine(selectedId) : null);
-  let pipeline      = $derived(repo.getPipelineByServiceLine(month || null));
+  let statusTotals  = $derived(version >= 0 && repo.getTotalsByStatus(month || null));
+  let officeTotals  = $derived(version >= 0 && repo.getTotalsByOffice(month || null));
+  let serviceTotals = $derived(version >= 0 && repo.getTotalsByServiceLine(month || null));
 
   // Single-currency check: the pipeline KPIs add EUR and GBP lines together,
   // which is the same defect the wiki flagged in the reporting model.
@@ -102,29 +107,18 @@
   </nav>
 
   <main>
-    {#if tab === 'dashboard'}
+    {#snippet overview()}
       <KpiBar kpi={kpi} currencyNote={currencyNote} />
+      <TotalsTables
+        statusRows={statusTotals}
+        officeRows={officeTotals}
+        serviceRows={serviceTotals}
+        {month}
+      />
+    {/snippet}
 
-      {#if month && pipeline.length}
-        <div class="card" style="margin-top:12px">
-          <h3 style="margin-bottom:8px">Open pipeline by service line</h3>
-          <table>
-            <thead>
-              <tr><th>Service line</th><th class="num">Lines</th><th class="num">Gross</th><th class="num">Weighted retained</th></tr>
-            </thead>
-            <tbody>
-              {#each pipeline as p (p.service_line)}
-                <tr class="nodrag">
-                  <td>{p.service_line}</td>
-                  <td class="num">{p.lines}</td>
-                  <td class="num">{new Intl.NumberFormat('en-GB').format(p.gross)}</td>
-                  <td class="num" style="color:#79b0ff">{new Intl.NumberFormat('en-GB').format(p.weighted)}</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/if}
+    {#if tab === 'dashboard'}
+      {@render overview()}
 
       <div class="work" style="margin-top:12px">
         <div>
@@ -153,28 +147,7 @@
         </div>
       </div>
     {:else if tab === 'wip'}
-      <KpiBar kpi={kpi} currencyNote={currencyNote} />
-
-      {#if month && pipeline.length}
-        <div class="card" style="margin-top:12px">
-          <h3 style="margin-bottom:8px">Open pipeline by service line</h3>
-          <table>
-            <thead>
-              <tr><th>Service line</th><th class="num">Lines</th><th class="num">Gross</th><th class="num">Weighted retained</th></tr>
-            </thead>
-            <tbody>
-              {#each pipeline as p (p.service_line)}
-                <tr class="nodrag">
-                  <td>{p.service_line}</td>
-                  <td class="num">{p.lines}</td>
-                  <td class="num">{new Intl.NumberFormat('en-GB').format(p.gross)}</td>
-                  <td class="num" style="color:#79b0ff">{new Intl.NumberFormat('en-GB').format(p.weighted)}</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/if}
+      {@render overview()}
 
       <div class="work" style="margin-top:12px">
         <div>
@@ -233,7 +206,5 @@
   .hint li { margin-bottom: 4px; }
   .loading, .fatal { padding: 60px 24px; text-align: center; }
   .fatal { color: var(--bad); }
-  tr.nodrag { cursor: default; }
-  tr.nodrag:hover { background: transparent; }
   @media (max-width: 1100px) { .work { grid-template-columns: 1fr; } }
 </style>

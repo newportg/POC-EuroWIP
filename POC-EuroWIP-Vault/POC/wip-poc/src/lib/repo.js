@@ -220,18 +220,66 @@ export function getKpis(month) {
   return row ?? {};
 }
 
-export function getPipelineByServiceLine(month) {
-  return query(
+/**
+ * Totals by lifecycle status: WIP (in hand), Billed, Paid, Lost.
+ *
+ * All four states are always returned so a zero reads as zero rather than as
+ * a missing row. `month` of null means every reporting month.
+ */
+export function getTotalsByStatus(month) {
+  const rows = query(
     `
-    SELECT service_line,
-           count(*)                            AS lines,
-           round(sum(gross_fee), 2)            AS gross,
-           round(sum(office_retained * probability / 100.0), 2) AS weighted
+    SELECT wip_status AS status,
+           count(*)                                       AS lines,
+           round(sum(gross_fee), 2)                       AS gross,
+           round(sum(CASE WHEN wip_status = 'WIP'
+                          THEN office_retained * probability / 100.0 END), 2) AS weighted
       FROM v_wip
-     WHERE wip_status = 'WIP' AND (? IS NULL OR reporting_month = ?)
-     GROUP BY service_line
-     ORDER BY gross DESC
+     WHERE ? IS NULL OR reporting_month = ?
+     GROUP BY wip_status
   `,
+    [month, month]
+  );
+
+  const byStatus = new Map(rows.map((r) => [r.status, r]));
+  return ['WIP', 'Billed', 'Paid', 'Lost'].map(
+    (status) => byStatus.get(status) ?? { status, lines: 0, gross: 0, weighted: 0 }
+  );
+}
+
+/**
+ * Totals by owning office and by service line: one row per group, with each
+ * lifecycle state in its own column. These are the two report dimensions the
+ * wiki asks for ("weighted pipeline by kf_serviceline, kf_owningoffice"), but
+ * split across every status rather than open WIP only, so the office view also
+ * answers what has been billed and lost.
+ *
+ * `in_hand` / `weighted` are open (WIP) lines; billed / paid / lost are the
+ * gross fee of lines that reached that state.
+ */
+const GROUP_TOTALS_SQL = (dimensionExpr) => `
+    SELECT ${dimensionExpr}                       AS group_name,
+           count(*)                               AS lines,
+           round(sum(CASE WHEN wip_status = 'WIP'   THEN gross_fee END), 2) AS in_hand,
+           round(sum(CASE WHEN wip_status = 'Billed' THEN gross_fee END), 2) AS billed,
+           round(sum(CASE WHEN wip_status = 'Paid'   THEN gross_fee END), 2) AS paid,
+           round(sum(CASE WHEN wip_status = 'Lost'   THEN gross_fee END), 2) AS lost,
+           round(sum(CASE WHEN wip_status = 'WIP'
+                          THEN office_retained * probability / 100.0 END), 2) AS weighted,
+           round(sum(gross_fee), 2)               AS total
+      FROM v_wip
+     WHERE ? IS NULL OR reporting_month = ?
+     GROUP BY ${dimensionExpr}
+     ORDER BY total DESC
+`;
+
+export function getTotalsByOffice(month) {
+  return query(GROUP_TOTALS_SQL("COALESCE(office_name, 'Unknown office')"), [month, month]);
+}
+
+export function getTotalsByServiceLine(month) {
+  return query(
+    GROUP_TOTALS_SQL("COALESCE(service_line, 'Unknown service line')"),
     [month, month]
   );
 }
