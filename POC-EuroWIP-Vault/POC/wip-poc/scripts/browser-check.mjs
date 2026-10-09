@@ -185,6 +185,21 @@ try {
     });
     await sleep(400);
 
+    // The WIP tab keeps the KPIs but drops the breakdown tables — those are
+    // Dashboard-only.
+    const wipContent = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const t = document.getElementById('app').innerText;
+        return { kpi: /weighted retained/i.test(t), totals: /totals by/i.test(t) };
+      })()`,
+      returnByValue: true
+    });
+    console.log(`\ntab "WIP": ${wipTab.result.value}`);
+    console.log(`  KPI bar:              ${wipContent.result.value.kpi ? 'shown' : 'MISSING'}`);
+    console.log(`  "totals by" sections: ${wipContent.result.value.totals ? 'present (unexpected)' : 'absent'}`);
+    if (!wipContent.result.value.kpi) exceptions.push('WIP tab is missing the KPI bar');
+    if (wipContent.result.value.totals) exceptions.push('WIP tab still shows the "totals by" sections');
+
     // Exercise a rule rejection through the real UI path.
     const click = await send('Runtime.evaluate', {
       expression: `(() => {
@@ -197,7 +212,6 @@ try {
       returnByValue: true
     });
     await sleep(400);
-    console.log(`\ntab "WIP": ${wipTab.result.value}`);
     console.log(`row selection: ${click.result.value}`);
     const detail = await send('Runtime.evaluate', {
       expression: `(() => {

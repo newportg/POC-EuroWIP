@@ -107,8 +107,11 @@
   </nav>
 
   <main>
-    {#snippet overview()}
+    {#snippet kpis()}
       <KpiBar kpi={kpi} currencyNote={currencyNote} />
+    {/snippet}
+
+    {#snippet totals()}
       <TotalsTables
         statusRows={statusTotals}
         officeRows={officeTotals}
@@ -118,9 +121,10 @@
     {/snippet}
 
     {#if tab === 'dashboard'}
-      {@render overview()}
+      {@render kpis()}
+      {@render totals()}
     {:else if tab === 'wip'}
-      {@render overview()}
+      {@render kpis()}
 
       <div class="work" style="margin-top:12px">
         <div>
