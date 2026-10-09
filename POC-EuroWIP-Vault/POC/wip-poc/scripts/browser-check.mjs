@@ -245,6 +245,7 @@ try {
           .find(b => b.textContent.trim().toLowerCase() === name).click();
         const pill = (id) => [...document.querySelectorAll('.step-pill')]
           .find(b => b.dataset.step === id);
+        const key = (k) => document.querySelector('[data-key="' + k + '"]');
 
         const setNative = (el, value) => {
           const proto = el instanceof HTMLSelectElement
@@ -259,40 +260,69 @@ try {
         tab('create');
         await sleep(300);
 
-        // Step 1 — Type: choose the service line (this also advances the wizard).
-        const card = document.querySelector('.type-card[data-sl="Valuations"]');
-        if (!card) return { error: 'service-line card not found' };
+        // Step 1 — Type: choose the service line.
+        const card = document.querySelector('.type-card[data-type="valuation"]');
+        if (!card) return { error: 'type card not found' };
         card.click();
         await sleep(150);
 
-        // Step 2 — Client: pick a brand, then the legal entity it owns. The
-        // entity select is empty until the brand is chosen, so drive it in order.
+        // Step 2 — Client: exercise the mock directory lookup, then confirm it
+        // filled the free-text fields.
         pill('client').click();
         await sleep(150);
-        const brandSel = document.querySelector('#i-brand');
-        if (!brandSel || brandSel.options.length < 2) return { error: 'brand options missing' };
-        setNative(brandSel, brandSel.options[1].value);
+        const lookup = document.querySelector('#clientLookup');
+        if (!lookup) return { error: 'mock client lookup missing' };
+        setNative(lookup, 'Whitfield');
+        await sleep(600); // debounce
+        const cRes = document.querySelectorAll('#clientLookupResults .loqate-result');
+        if (!cRes.length) return { error: 'mock client lookup returned nothing' };
+        cRes[0].click();
         await sleep(200);
-        const leSel = document.querySelector('#i-le');
-        if (!leSel || leSel.options.length < 2) return { error: 'legal entity options missing' };
-        setNative(leSel, leSel.options[1].value);
-        await sleep(200);
+        if (!key('clientName') || !key('clientName').value) {
+          return { error: 'mock client did not fill the form' };
+        }
 
-        // Step 5 — Terms: owning office, expected revenue and negotiator.
+        // Step 3 — Property: the Loqate UI must be present. Fill the fields
+        // directly so the check stays offline-deterministic.
+        pill('property').click();
+        await sleep(150);
+        if (!document.querySelector('#loqateQuery')) return { error: 'Loqate search box missing on Property' };
+        if (!document.querySelector('#country')) return { error: 'country select missing on Property' };
+        setNative(key('country'), 'United Kingdom');
+        setNative(key('address'), '1 Liverpool Street');
+        setNative(key('city'), 'London');
+        setNative(key('postcode'), 'EC2M 7NH');
+        await sleep(150);
+
+        // Step 4 — Details: the required Valuation fields.
+        pill('details').click();
+        await sleep(150);
+        setNative(document.querySelector('#d-kf_valuationpurpose'), 'Secured Lending');
+        setNative(document.querySelector('#d-kf_valuationbasis'), 'Market Value');
+        setNative(document.querySelector('#d-kf_instructiondate'), '2026-10-09');
+        setNative(document.querySelector('#d-kf_reportduedate'), '2026-11-15');
+        await sleep(150);
+
+        // Step 5 — Terms: owning office first (it sets default currency and the
+        // negotiator list), then the rest.
         pill('terms').click();
         await sleep(150);
-        const officeSel = document.querySelector('#i-office');
+        const officeSel = document.querySelector('#owningOffice');
         if (!officeSel || officeSel.options.length < 2) return { error: 'office options missing' };
-        setNative(officeSel, officeSel.options[1].value);
-        setNative(document.querySelector('#i-rev'), '275000');
-        setNative(document.querySelector('#i-neg'), 'Camille Roux');
+        setNative(officeSel, 'Paris');
+        await sleep(200);
+        setNative(key('feeBasis'), 'Fixed fee');
+        setNative(key('expectedRevenue'), '275000');
+        const negSel = document.querySelector('#assignedTo');
+        if (!negSel || negSel.options.length < 2) return { error: 'negotiator options missing after office choice' };
+        setNative(negSel, negSel.options[1].value);
         await sleep(200);
 
         // Step 6 — Review: the readiness list must be fully green, then accept.
         pill('review').click();
         await sleep(200);
         const missingRequired = document.querySelectorAll('.readiness-row.missing').length;
-        const acceptBtn = document.querySelector('#accept-btn');
+        const acceptBtn = document.querySelector('#acceptBtn');
         if (!acceptBtn) return { error: 'accept button missing' };
         if (acceptBtn.disabled) {
           return { error: 'accept still disabled', missing: missingRequired };

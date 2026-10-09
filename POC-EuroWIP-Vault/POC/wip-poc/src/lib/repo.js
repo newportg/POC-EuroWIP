@@ -449,6 +449,109 @@ export function createWip(input) {
   }
 }
 
+// ------------------------------------------------- wizard resolution
+
+/**
+ * The wizard collects free-text client data and mock lookups, so accepting it
+ * has to resolve those names onto the relational model before createInstruction
+ * can run its F5 / PL-1 checks.
+ *
+ * Each resolver is find-or-create by name, so re-accepting the same client (or
+ * re-using a contact) reuses the existing row rather than duplicating it.
+ */
+function nextId(table) {
+  return queryOne(`SELECT COALESCE(MAX(id), 0) + 1 AS n FROM ${table}`).n;
+}
+
+/**
+ * Resolve the two-account split on kf_Instruction. The client name is the
+ * Brand/Group (relationship owner); the invoicing legal entity is a Legal
+ * Entity. When the wizard leaves the legal entity blank the client name is used
+ * for both, classified as a Legal Entity so F5 still passes.
+ */
+export function resolveClientAccounts({ clientName, legalEntity }) {
+  const brandName = String(clientName || '').trim();
+  if (!brandName) return { ok: false, error: 'A client name is required.' };
+  const leName = String(legalEntity || '').trim() || brandName;
+
+  try {
+    return tx(() => {
+      let brand = queryOne(
+        "SELECT id FROM account WHERE name = ? AND classification = 'Brand/Group'",
+        [brandName]
+      );
+      if (!brand) {
+        const id = nextId('account');
+        run("INSERT INTO account (id, name, classification, parent_account_id) VALUES (?,?,?,NULL)",
+          [id, brandName, 'Brand/Group']);
+        brand = { id };
+      }
+      let le = queryOne(
+        "SELECT id FROM account WHERE name = ? AND classification = 'Legal Entity'",
+        [leName]
+      );
+      if (!le) {
+        const id = nextId('account');
+        run('INSERT INTO account (id, name, classification, parent_account_id) VALUES (?,?,?,?)',
+          [id, leName, 'Legal Entity', brand.id]);
+        le = { id };
+      }
+      return { ok: true, brandId: brand.id, legalEntityId: le.id };
+    });
+  } catch (err) {
+    return { ok: false, error: cleanError(err) };
+  }
+}
+
+/** Find-or-create a contact against a legal entity. Returns the id, or null. */
+export function resolveContact({ contactName, accountId }) {
+  const name = String(contactName || '').trim();
+  if (!name) return null;
+  const existing = queryOne('SELECT id FROM contact WHERE name = ?', [name]);
+  if (existing) return existing.id;
+  const id = nextId('contact');
+  run('INSERT INTO contact (id, name, account_id) VALUES (?,?,?)', [id, name, accountId]);
+  return id;
+}
+
+/* Mock office country → the POC's ISO-shaped business_unit.country. */
+const OFFICE_COUNTRY = {
+  'United Kingdom': 'UK', Spain: 'ES', France: 'FR', Germany: 'DE', Poland: 'PL'
+};
+
+/**
+ * Map a mock office onto a business_unit. City match first (London/Madrid/Paris
+ * exist), then country, then the first office as a last resort — Germany and
+ * Poland have no seeded office, so they fall back rather than fail.
+ */
+export function resolveOfficeId(office) {
+  if (!office) return null;
+  const byCity = queryOne('SELECT id FROM business_unit WHERE city = ?', [office.name]);
+  if (byCity) return byCity.id;
+  const code = OFFICE_COUNTRY[office.country];
+  if (code) {
+    const byCountry = queryOne('SELECT id FROM business_unit WHERE country = ? ORDER BY id LIMIT 1', [code]);
+    if (byCountry) return byCountry.id;
+  }
+  return queryOne('SELECT id FROM business_unit ORDER BY id LIMIT 1')?.id ?? null;
+}
+
+/**
+ * Find-or-create a property from the wizard's address. The reference payload
+ * keeps the address inline; here it is also persisted so kf_propertyid is real.
+ */
+export function resolveProperty({ address, city, postcode, country, sector }) {
+  const name = [address, city, postcode, country]
+    .map((v) => String(v || '').trim()).filter(Boolean).join(', ');
+  if (!name) return null;
+  const existing = queryOne('SELECT id FROM property WHERE name = ?', [name]);
+  if (existing) return existing.id;
+  const id = nextId('property');
+  run('INSERT INTO property (id, name, sector, site_id) VALUES (?,?,?,NULL)',
+    [id, name, String(sector || 'Other').trim() || 'Other']);
+  return id;
+}
+
 // --------------------------------------------------------------- actions
 
 export function downloadDatabase() {
